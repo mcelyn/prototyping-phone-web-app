@@ -477,24 +477,24 @@ export default function PhotoBooth() {
 
       {/* 2. RESULTS VIEW (Floating Real Paper Strip on Gradient Wave Background) */}
       {appState === "results" && stripResult && (
-        <div className="relative w-full h-full flex flex-col bg-transparent">
+        <div className="relative w-full h-full flex flex-col bg-transparent overflow-hidden">
           {/* Top Customization Panel */}
-          <div className="shrink-0 pt-2 pb-2.5 px-3 flex flex-col gap-2.5 bg-[#FAF6EB]/95 backdrop-blur-xl border-b border-[#D9D3C1] z-20 shadow-sm">
+          <div className="shrink-0 pt-2 pb-2 px-3 flex flex-col gap-2 bg-[#FAF6EB]/95 backdrop-blur-xl border-b border-[#D9D3C1] z-20 shadow-sm">
             <div className="flex items-center justify-between px-1">
               <h2 className="text-xs font-semibold tracking-wider uppercase text-[#736B5E]">
-                Select Real Paper Style
+                Select Frame Style
               </h2>
               {saveStatus && (
-                <span className="text-[10px] font-semibold text-[#F7A87A] bg-[#FAF6EB] border border-[#F7A87A] px-2.5 py-0.5 rounded-md shadow-xs">
+                <span className="text-[10px] font-semibold text-[#F7A87A] bg-[#FAF6EB] border border-[#F7A87A] px-2 py-0.5 rounded-md shadow-xs">
                   {saveStatus}
                 </span>
               )}
             </div>
 
-            {/* 1. Realistic Paper Border Styles Selector */}
+            {/* 1. Realistic Frame Styles Selector */}
             <div className="flex flex-col gap-1">
               <span className="text-[10px] uppercase font-medium text-[#8F8778] tracking-wider px-1">
-                Paper Style
+                Frame Style
               </span>
               <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 px-0.5">
                 {BORDER_OPTIONS.map((opt, idx) => {
@@ -503,7 +503,7 @@ export default function PhotoBooth() {
                     <div key={opt.id} className="flex items-center shrink-0">
                       <button
                         onClick={() => setSelectedBorder(opt.id)}
-                        className={`shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-xs font-medium tracking-wide transition-all ${
+                        className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium tracking-wide transition-all ${
                           isActive
                             ? "bg-[#F7A87A] text-[#FAF6EB] border border-[#F7A87A] font-semibold shadow-xs"
                             : "bg-[#FAF6EB] text-[#F7A87A] border border-[#F7A87A] hover:bg-[#F5F0DF]"
@@ -555,32 +555,27 @@ export default function PhotoBooth() {
             </div>
           </div>
 
-          {/* REALISTIC PHYSICAL PAPER PREVIEW */}
-          <div className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar px-6 py-6 flex items-start justify-center">
-            {/* Physical paper card with tactile drop shadow and paper edge */}
-            <div
-              className={`relative ${
-                selectedBorder === "party" ? "max-w-[340px]" : "max-w-[300px]"
-              } w-full rounded-xs overflow-hidden transition-transform`}
-              style={{
-                boxShadow:
-                  "0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 20px 40px -4px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.15)",
-              }}
-            >
+          {/* REALISTIC PHYSICAL PAPER PREVIEW (Fitted 100% within screen height - NO SCROLLING NEEDED) */}
+          <div className="flex-1 min-h-0 w-full p-3 sm:p-4 flex items-center justify-center overflow-hidden">
+            <div className="relative h-full w-full max-h-full max-w-full flex items-center justify-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={stripResult.dataUrl}
-                alt="Realistic paper photo booth strip"
-                className="w-full h-auto object-contain block"
+                alt="Realistic photo booth strip"
+                className="max-h-full max-w-full h-auto w-auto object-contain rounded-xs select-none block transition-transform"
+                style={{
+                  boxShadow:
+                    "0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 20px 40px -4px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.15)",
+                }}
               />
             </div>
           </div>
 
           {/* Bottom Action Bar */}
-          <div className="shrink-0 p-4 bg-[#FAF6EB]/95 backdrop-blur-xl border-t border-[#D9D3C1] flex items-center gap-3 z-20 shadow-lg">
+          <div className="shrink-0 p-3 sm:p-4 bg-[#FAF6EB]/95 backdrop-blur-xl border-t border-[#D9D3C1] flex items-center gap-3 z-20 shadow-lg">
             <button
               onClick={handleRetake}
-              className="flex-1 h-12 rounded-md bg-[#FAF6EB] border border-[#F7A87A] text-[#F7A87A] hover:bg-[#F5F0DF] active:scale-98 transition-all flex items-center justify-center gap-2 text-xs font-semibold tracking-wider uppercase shadow-xs"
+              className="flex-1 h-11 sm:h-12 rounded-md bg-[#FAF6EB] border border-[#F7A87A] text-[#F7A87A] hover:bg-[#F5F0DF] active:scale-98 transition-all flex items-center justify-center gap-2 text-xs font-semibold tracking-wider uppercase shadow-xs"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -601,7 +596,7 @@ export default function PhotoBooth() {
 
             <button
               onClick={handleSaveOrShare}
-              className="flex-[2] h-12 rounded-md bg-[#F7A87A] border border-[#F7A87A] text-[#FAF6EB] hover:bg-[#F59E6C] active:scale-98 transition-all flex items-center justify-center gap-2 text-xs font-semibold tracking-wider uppercase shadow-sm"
+              className="flex-[2] h-11 sm:h-12 rounded-md bg-[#F7A87A] border border-[#F7A87A] text-[#FAF6EB] hover:bg-[#F59E6C] active:scale-98 transition-all flex items-center justify-center gap-2 text-xs font-semibold tracking-wider uppercase shadow-sm"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
