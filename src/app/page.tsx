@@ -379,17 +379,13 @@ export default function PhotoBooth() {
 
               {/* Big Animated 3-2-1 Countdown Overlay inside the Viewfinder */}
               {appState === "countdown" && (
-                <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/35 backdrop-blur-[2px] pointer-events-none">
-                  {countdownNumber !== null ? (
+                <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/25 pointer-events-none">
+                  {countdownNumber !== null && (
                     <div
                       key={`${currentShotIndex}-${countdownNumber}`}
                       className="w-32 h-32 rounded-2xl bg-[#FAF6EB]/95 backdrop-blur-md border-2 border-[#F7A87A] flex items-center justify-center text-7xl font-black text-[#F7A87A] shadow-2xl animate-countdown-pop drop-shadow-[0_8px_20px_rgba(0,0,0,0.5)]"
                     >
                       {countdownNumber}
-                    </div>
-                  ) : (
-                    <div className="text-3xl font-extrabold tracking-widest text-[#FAF6EB] uppercase drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)]">
-                      Pose!
                     </div>
                   )}
 

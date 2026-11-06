@@ -3,11 +3,11 @@
 import { useEffect, useRef } from "react";
 
 /**
- * Animated Gradient Wave Ripple Background
- * Recreates the exact glowing arch/wave aesthetic from the reference image:
- * Deep midnight navy at top, transitioning through an undulating ripple dome
- * with neon orange/vermilion, vibrant fuchsia pink, and luminous chartreuse/lime,
- * cycling smoothly through different color spectrums over time.
+ * Textured Grain Gradient Background
+ * Recreates the exact warm, moody analog aesthetic from the reference images:
+ * - Fluid, breathing multi-point mesh gradients drifting smoothly between deep crimson,
+ *   velvety fuchsia, cosmic purple, and nocturnal plum.
+ * - Tactile, high-density film grain texture overlay matching the uploaded reference photos.
  */
 export default function GradientWaveBackground() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -22,6 +22,27 @@ export default function GradientWaveBackground() {
     let animationFrameId: number;
     let width = 0;
     let height = 0;
+
+    // Pre-generate a high-density, realistic analog film grain pattern
+    const noiseCanvas = document.createElement("canvas");
+    const noiseSize = 256;
+    noiseCanvas.width = noiseSize;
+    noiseCanvas.height = noiseSize;
+    const nCtx = noiseCanvas.getContext("2d");
+
+    if (nCtx) {
+      const imgData = nCtx.createImageData(noiseSize, noiseSize);
+      const data = imgData.data;
+      for (let i = 0; i < data.length; i += 4) {
+        // High frequency fine-grain film noise
+        const noise = Math.floor(Math.random() * 255);
+        data[i] = noise;
+        data[i + 1] = noise;
+        data[i + 2] = noise;
+        data[i + 3] = 42; // Opacity for rich tactile grain
+      }
+      nCtx.putImageData(imgData, 0, 0);
+    }
 
     const resize = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -38,131 +59,92 @@ export default function GradientWaveBackground() {
     let time = 0;
 
     const render = () => {
-      time += 0.008;
+      time += 0.006;
 
-      // Color cycle angle (cycles through color schemes smoothly)
-      // Reference scheme: Sunset Ember (Navy -> Crimson -> Fiery Orange -> Neon Pink -> Pistachio)
-      // Transitions into Cyber Aurora, Twilight Orchid, and Tropic Dawn
-      const cycle = time * 0.25;
-      const hueShift = Math.sin(cycle) * 45; // shifts palette harmoniously
+      // Base cycling hue shift (transitions between crimson/scarlet and deep purple/fuchsia)
+      const cycle = time * 0.4;
+      const hueShift = Math.sin(cycle) * 45; // shifts between ~330 (fuchsia/purple) and ~15 (crimson/ember)
 
-      // 1. Fill base midnight background
-      const baseGrad = ctx.createLinearGradient(0, 0, 0, height);
-      baseGrad.addColorStop(0, `hsl(${220 + hueShift * 0.3}, 38%, 10%)`);
-      baseGrad.addColorStop(0.65, `hsl(${225 + hueShift * 0.3}, 35%, 8%)`);
-      baseGrad.addColorStop(1, `hsl(${230 + hueShift * 0.3}, 40%, 6%)`);
-      ctx.fillStyle = baseGrad;
+      // 1. Deep Midnight Base Background (Velvety dark plum/black)
+      const baseHue = (310 + hueShift * 0.5 + 360) % 360;
+      ctx.fillStyle = `hsl(${baseHue}, 45%, 6%)`;
       ctx.fillRect(0, 0, width, height);
 
-      // Wave dome parameters
-      const domeH = height * 0.68; // height of the radiant wave arch
-      const baseY = height;
+      // 2. Multi-point atmospheric gradient blobs (Matching reference images)
+      // Blob 1: Crimson / Scarlet orb (center-left drifting)
+      const b1x = width * (0.35 + Math.sin(time * 0.8) * 0.15);
+      const b1y = height * (0.38 + Math.cos(time * 0.7) * 0.12);
+      const b1r = Math.max(width, height) * 0.75;
+      const b1Hue = (355 + hueShift + 360) % 360; // rich scarlet/red
+      const grad1 = ctx.createRadialGradient(b1x, b1y, 0, b1x, b1y, b1r);
+      grad1.addColorStop(0, `hsla(${b1Hue}, 85%, 46%, 0.85)`);
+      grad1.addColorStop(0.45, `hsla(${b1Hue - 15}, 80%, 35%, 0.5)`);
+      grad1.addColorStop(1, "rgba(0, 0, 0, 0)");
 
-      // Draw 3 layered undulating wave domes for depth & gentle ripple
-      const layers = [
-        {
-          amp: 24,
-          freq: 0.0028,
-          speed: 1.1,
-          offset: 0,
-          scaleH: 1.0,
-          opacity: 0.95,
-        },
-        {
-          amp: 18,
-          freq: 0.0042,
-          speed: -0.85,
-          offset: 1.5,
-          scaleH: 0.88,
-          opacity: 0.85,
-        },
-        {
-          amp: 12,
-          freq: 0.0055,
-          speed: 1.4,
-          offset: 3.2,
-          scaleH: 0.72,
-          opacity: 0.9,
-        },
-      ];
-
-      layers.forEach((layer) => {
-        const currentH = domeH * layer.scaleH;
-        const peakY = baseY - currentH;
-
-        ctx.save();
-        ctx.beginPath();
-        ctx.moveTo(0, height);
-
-        // Compute parabolic arch with sinusoidal ripple
-        const segments = 45;
-        const dx = width / segments;
-
-        for (let i = 0; i <= segments; i++) {
-          const x = i * dx;
-          // Normalized -1 to 1 from center
-          const nx = (x - width / 2) / (width / 2);
-          // Parabolic bell curve shape matching the reference image dome
-          const arch = Math.max(0, 1 - Math.pow(Math.abs(nx), 1.7));
-
-          // Gentle undulating ripples propagating across the crest
-          const ripple =
-            Math.sin(x * layer.freq + time * layer.speed + layer.offset) * layer.amp +
-            Math.cos(x * layer.freq * 1.8 - time * 0.6) * (layer.amp * 0.45);
-
-          const y = baseY - arch * currentH + ripple * (arch * 0.8 + 0.2);
-
-          if (i === 0) {
-            ctx.lineTo(x, y);
-          } else {
-            ctx.lineTo(x, y);
-          }
-        }
-
-        ctx.lineTo(width, height);
-        ctx.closePath();
-
-        // Multi-stop radiant gradient matching image:
-        // Top: Deep Crimson / Ember
-        // Mid-top: Neon Orange / Vermilion
-        // Mid: Hot Fuchsia / Pink
-        // Bottom: Luminous Chartreuse / Pistachio
-        const grad = ctx.createLinearGradient(width / 2, peakY - 30, width / 2, height);
-
-        // Dynamic cycling colors
-        const h1 = (12 + hueShift + 360) % 360; // Crimson / Ember
-        const h2 = (22 + hueShift + 360) % 360; // Fiery Orange
-        const h3 = (335 + hueShift + 360) % 360; // Fuchsia Pink
-        const h4 = (85 + hueShift + 360) % 360; // Luminous Chartreuse
-
-        grad.addColorStop(0, `hsla(${h1}, 95%, 45%, 0)`);
-        grad.addColorStop(0.18, `hsla(${h1}, 98%, 48%, ${0.55 * layer.opacity})`);
-        grad.addColorStop(0.42, `hsla(${h2}, 100%, 55%, ${0.92 * layer.opacity})`);
-        grad.addColorStop(0.68, `hsla(${h3}, 98%, 62%, ${0.95 * layer.opacity})`);
-        grad.addColorStop(0.92, `hsla(${h4}, 92%, 78%, ${0.98 * layer.opacity})`);
-        grad.addColorStop(1, `hsla(${h4}, 85%, 85%, ${1 * layer.opacity})`);
-
-        ctx.fillStyle = grad;
-        ctx.fill();
-        ctx.restore();
-      });
-
-      // Ambient radial bloom overlay at the base for atmospheric glow
       ctx.save();
       ctx.globalCompositeOperation = "screen";
-      const bloom = ctx.createRadialGradient(
+      ctx.fillStyle = grad1;
+      ctx.fillRect(0, 0, width, height);
+      ctx.restore();
+
+      // Blob 2: Velvety Purple / Magenta orb (top-left & diagonal)
+      const b2x = width * (0.2 + Math.cos(time * 0.6) * 0.12);
+      const b2y = height * (0.2 + Math.sin(time * 0.9) * 0.1);
+      const b2r = Math.max(width, height) * 0.65;
+      const b2Hue = (295 + hueShift + 360) % 360; // deep royal purple / fuchsia
+      const grad2 = ctx.createRadialGradient(b2x, b2y, 0, b2x, b2y, b2r);
+      grad2.addColorStop(0, `hsla(${b2Hue}, 80%, 48%, 0.75)`);
+      grad2.addColorStop(0.5, `hsla(${b2Hue}, 75%, 32%, 0.4)`);
+      grad2.addColorStop(1, "rgba(0, 0, 0, 0)");
+
+      ctx.save();
+      ctx.globalCompositeOperation = "screen";
+      ctx.fillStyle = grad2;
+      ctx.fillRect(0, 0, width, height);
+      ctx.restore();
+
+      // Blob 3: Warm Amber / Sunset Glow (subtle bottom-right counterpoint)
+      const b3x = width * (0.75 + Math.sin(time * 0.75) * 0.12);
+      const b3y = height * (0.68 + Math.cos(time * 0.85) * 0.14);
+      const b3r = Math.max(width, height) * 0.6;
+      const b3Hue = (20 + hueShift + 360) % 360; // warm ember
+      const grad3 = ctx.createRadialGradient(b3x, b3y, 0, b3x, b3y, b3r);
+      grad3.addColorStop(0, `hsla(${b3Hue}, 90%, 50%, 0.65)`);
+      grad3.addColorStop(0.55, `hsla(${b3Hue - 20}, 85%, 32%, 0.35)`);
+      grad3.addColorStop(1, "rgba(0, 0, 0, 0)");
+
+      ctx.save();
+      ctx.globalCompositeOperation = "screen";
+      ctx.fillStyle = grad3;
+      ctx.fillRect(0, 0, width, height);
+      ctx.restore();
+
+      // 3. Tactile Film Grain Overlay (Exactly matching images 1 & 2)
+      if (nCtx) {
+        ctx.save();
+        ctx.globalCompositeOperation = "overlay";
+        const pattern = ctx.createPattern(noiseCanvas, "repeat");
+        if (pattern) {
+          ctx.fillStyle = pattern;
+          ctx.fillRect(0, 0, width, height);
+        }
+        ctx.restore();
+      }
+
+      // 4. Subtle Natural Vignette for depth
+      ctx.save();
+      ctx.globalCompositeOperation = "multiply";
+      const vignette = ctx.createRadialGradient(
         width / 2,
-        height,
-        height * 0.1,
+        height / 2,
+        Math.min(width, height) * 0.35,
         width / 2,
-        height * 0.4,
-        width * 0.85
+        height / 2,
+        Math.max(width, height) * 0.8
       );
-      const bloomHue = (30 + hueShift + 360) % 360;
-      bloom.addColorStop(0, `hsla(${bloomHue}, 90%, 65%, 0.3)`);
-      bloom.addColorStop(0.5, `hsla(${bloomHue - 15}, 95%, 55%, 0.15)`);
-      bloom.addColorStop(1, "rgba(0, 0, 0, 0)");
-      ctx.fillStyle = bloom;
+      vignette.addColorStop(0, "rgba(255, 255, 255, 0)");
+      vignette.addColorStop(1, "rgba(10, 5, 12, 0.55)");
+      ctx.fillStyle = vignette;
       ctx.fillRect(0, 0, width, height);
       ctx.restore();
 
