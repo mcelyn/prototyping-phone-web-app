@@ -9,6 +9,7 @@ import {
   BORDER_OPTIONS,
   FILTER_OPTIONS,
 } from "@/lib/photoStrip";
+import GradientWaveBackground from "@/components/GradientWaveBackground";
 
 type AppState = "camera" | "countdown" | "processing" | "results" | "permission_denied";
 
@@ -122,7 +123,6 @@ export default function PhotoBooth() {
     return canvas.toDataURL("image/jpeg", 0.96);
   };
 
-  // Helper wait function
   const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
   // Sequence to take 4 photos with 3-2-1 countdown, sound, and light flood
@@ -271,7 +271,7 @@ export default function PhotoBooth() {
 
   return (
     <main
-      className="relative w-full h-full flex flex-col bg-black text-white overflow-hidden select-none"
+      className="relative w-full h-full flex flex-col bg-transparent text-white overflow-hidden select-none"
       style={{
         paddingTop: "env(safe-area-inset-top, 0px)",
         paddingBottom: "env(safe-area-inset-bottom, 0px)",
@@ -279,6 +279,9 @@ export default function PhotoBooth() {
         paddingRight: "env(safe-area-inset-right, 0px)",
       }}
     >
+      {/* CONSTANT GENTLE GRADIENT WAVE RIPPLE BACKGROUND */}
+      <GradientWaveBackground />
+
       {/* BLINDING LIGHT FLOOD OVERLAY */}
       {isLightFlooding && (
         <div className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center overflow-hidden">
@@ -296,8 +299,8 @@ export default function PhotoBooth() {
       {/* 1. CAMERA VIEW */}
       {(appState === "camera" || appState === "countdown" || appState === "processing") && (
         <div className="relative w-full h-full flex flex-col items-center justify-between overflow-hidden">
-          {/* Live Video Preview (Full Screen) */}
-          <div className="absolute inset-0 z-0 bg-neutral-950 flex items-center justify-center overflow-hidden">
+          {/* Live Video Preview (Full Screen with smooth blending) */}
+          <div className="absolute inset-0 z-0 bg-transparent flex items-center justify-center overflow-hidden">
             <video
               ref={videoRef}
               autoPlay
@@ -307,20 +310,24 @@ export default function PhotoBooth() {
                 facingMode === "user" ? "scale-x-[-1]" : ""
               }`}
             />
+            {/* Subtle atmospheric vignette framing camera */}
+            <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-black/40 via-transparent to-black/60" />
           </div>
 
-          {/* Top Bar Header */}
-          <div className="relative z-20 w-full pt-3 px-5 flex items-center justify-between">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-xs font-semibold tracking-wider uppercase text-white/90">
-              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+          {/* Top Bar Header (Styled in warm cream & apricot border) */}
+          <div className="relative z-20 w-full pt-3 px-4 flex items-center justify-between">
+            {/* App Title badge */}
+            <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-md bg-[#FAF6EB]/95 backdrop-blur-md border border-[#F7A87A] text-xs font-medium tracking-wider uppercase text-[#F7A87A] shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-[#F7A87A] animate-pulse" />
               Photo Booth
             </div>
 
+            {/* Top Buttons with exact reference styling */}
             <div className="flex items-center gap-2">
               {!isStandalone && (
                 <button
                   onClick={() => setShowInstallTip(true)}
-                  className="px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-md border border-white/10 text-xs font-medium text-white/90 active:scale-95 transition-transform"
+                  className="px-3.5 py-1.5 rounded-md bg-[#FAF6EB]/95 backdrop-blur-md border border-[#F7A87A] text-xs font-medium tracking-wider uppercase text-[#F7A87A] active:scale-95 transition-transform shadow-sm"
                 >
                   Install App
                 </button>
@@ -330,15 +337,15 @@ export default function PhotoBooth() {
                 onClick={toggleCameraFacing}
                 disabled={appState !== "camera"}
                 aria-label="Switch camera"
-                className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/15 flex items-center justify-center text-white active:scale-90 transition-transform disabled:opacity-40"
+                className="w-9 h-9 rounded-md bg-[#FAF6EB]/95 backdrop-blur-md border border-[#F7A87A] flex items-center justify-center text-[#F7A87A] active:scale-90 transition-transform disabled:opacity-40 shadow-sm"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="w-5 h-5"
+                  className="w-4 h-4"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
-                  strokeWidth="2"
+                  strokeWidth="2.2"
                 >
                   <path
                     strokeLinecap="round"
@@ -353,19 +360,19 @@ export default function PhotoBooth() {
           {/* 3-2-1 Countdown & Shot Indicator Center Overlay */}
           {appState === "countdown" && (
             <div className="relative z-30 flex-1 flex flex-col items-center justify-center pointer-events-none">
-              <div className="mb-4 px-4 py-1.5 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-sm font-semibold tracking-wider uppercase text-white">
+              <div className="mb-4 px-4 py-1.5 rounded-md bg-[#FAF6EB]/95 backdrop-blur-md border border-[#F7A87A] text-xs font-semibold tracking-wider uppercase text-[#F7A87A] shadow-md">
                 Photo {currentShotIndex} of 4
               </div>
 
               {countdownNumber !== null ? (
                 <div
                   key={`${currentShotIndex}-${countdownNumber}`}
-                  className="w-36 h-36 rounded-full bg-black/40 backdrop-blur-xl border border-white/30 flex items-center justify-center text-8xl font-black text-white shadow-2xl animate-countdown-pop drop-shadow-[0_10px_20px_rgba(0,0,0,0.8)]"
+                  className="w-36 h-36 rounded-2xl bg-[#FAF6EB]/90 backdrop-blur-xl border-2 border-[#F7A87A] flex items-center justify-center text-8xl font-black text-[#F7A87A] shadow-2xl animate-countdown-pop drop-shadow-[0_10px_25px_rgba(0,0,0,0.5)]"
                 >
                   {countdownNumber}
                 </div>
               ) : (
-                <div className="text-3xl font-extrabold tracking-widest text-white uppercase drop-shadow-lg">
+                <div className="text-3xl font-extrabold tracking-widest text-[#FAF6EB] uppercase drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)]">
                   Smile!
                 </div>
               )}
@@ -375,12 +382,12 @@ export default function PhotoBooth() {
                 {[1, 2, 3, 4].map((i) => (
                   <div
                     key={i}
-                    className={`h-2.5 rounded-full transition-all duration-300 ${
+                    className={`h-2 rounded-full transition-all duration-300 ${
                       i < currentShotIndex
-                        ? "w-8 bg-green-400"
+                        ? "w-8 bg-[#F7A87A]"
                         : i === currentShotIndex
                         ? "w-8 bg-white animate-pulse"
-                        : "w-2.5 bg-white/30"
+                        : "w-2 bg-white/40"
                     }`}
                   />
                 ))}
@@ -390,28 +397,34 @@ export default function PhotoBooth() {
 
           {/* Processing overlay */}
           {appState === "processing" && (
-            <div className="relative z-30 flex-1 flex flex-col items-center justify-center bg-black/60 backdrop-blur-md">
-              <div className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin mb-4" />
-              <p className="text-base font-semibold tracking-wide">Developing photo strip...</p>
+            <div className="relative z-30 flex-1 flex flex-col items-center justify-center bg-black/40 backdrop-blur-md">
+              <div className="w-12 h-12 border-4 border-[#FAF6EB]/30 border-t-[#F7A87A] rounded-full animate-spin mb-4" />
+              <p className="text-sm font-semibold tracking-wider uppercase text-[#FAF6EB]">
+                Developing photo strip...
+              </p>
             </div>
           )}
 
           {appState === "camera" && <div className="flex-1" />}
 
-          {/* Bottom Shutter Controls */}
-          <div className="relative z-20 w-full pb-8 pt-4 flex flex-col items-center justify-center">
+          {/* Bottom Shutter Controls with reference button design */}
+          <div className="relative z-20 w-full pb-8 pt-4 flex flex-col items-center justify-center px-4">
             {appState === "camera" && (
-              <div className="flex flex-col items-center gap-3">
-                <span className="text-xs font-medium tracking-wider uppercase text-white/70 drop-shadow">
-                  Takes 4 photos with flash &amp; sound
+              <div className="flex flex-col items-center gap-3 w-full max-w-xs">
+                <span className="text-[11px] font-medium tracking-wider uppercase text-[#FAF6EB] drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                  4 photos in a row • flash &amp; sound
                 </span>
 
+                {/* Shutter Button styled in warm cream with delicate peach border */}
                 <button
                   onClick={startPhotoSequence}
                   aria-label="Take 4 photos"
-                  className="group relative flex items-center justify-center w-20 h-20 rounded-full border-4 border-white p-1 transition-transform active:scale-95 touch-manipulation focus:outline-none"
+                  className="w-full h-14 rounded-md bg-[#FAF6EB]/95 backdrop-blur-md border-1.5 border-[#F7A87A] flex items-center justify-center gap-3 text-sm font-semibold tracking-wider uppercase text-[#F7A87A] active:scale-98 transition-all shadow-lg hover:bg-[#FAF6EB]"
                 >
-                  <span className="w-full h-full rounded-full bg-white transition-all duration-150 group-active:scale-90 group-active:bg-neutral-200 shadow-lg" />
+                  <span className="w-3.5 h-3.5 rounded-full border border-[#F7A87A] bg-[#F7A87A]/30 flex items-center justify-center">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#F7A87A]" />
+                  </span>
+                  Take 4 Photos
                 </button>
               </div>
             )}
@@ -419,17 +432,17 @@ export default function PhotoBooth() {
         </div>
       )}
 
-      {/* 2. RESULTS VIEW */}
+      {/* 2. RESULTS VIEW (Floating above gentle undulating gradient wave ripple) */}
       {appState === "results" && stripResult && (
-        <div className="relative w-full h-full flex flex-col bg-neutral-950">
-          {/* Top Customization Panel */}
-          <div className="shrink-0 pt-2 pb-2.5 px-3 flex flex-col gap-2 bg-neutral-900/95 backdrop-blur-xl border-b border-white/10 z-20">
+        <div className="relative w-full h-full flex flex-col bg-transparent">
+          {/* Top Customization Panel in warm cream with reference border buttons */}
+          <div className="shrink-0 pt-2 pb-2.5 px-3 flex flex-col gap-2.5 bg-[#FAF6EB]/95 backdrop-blur-xl border-b border-[#D9D3C1] z-20 shadow-sm">
             <div className="flex items-center justify-between px-1">
-              <h2 className="text-xs font-bold tracking-wider uppercase text-white/90">
+              <h2 className="text-xs font-semibold tracking-wider uppercase text-[#736B5E]">
                 Customize Photo Strip
               </h2>
               {saveStatus && (
-                <span className="text-[11px] font-semibold text-emerald-400 bg-emerald-950/70 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                <span className="text-[10px] font-semibold text-[#F7A87A] bg-[#FAF6EB] border border-[#F7A87A] px-2.5 py-0.5 rounded-md shadow-xs">
                   {saveStatus}
                 </span>
               )}
@@ -437,25 +450,29 @@ export default function PhotoBooth() {
 
             {/* 1. Border Style Selector (Stamp, Vintage Film, Polaroid, etc.) */}
             <div className="flex flex-col gap-1">
-              <span className="text-[10px] uppercase font-bold text-white/50 tracking-wider px-1">
+              <span className="text-[10px] uppercase font-medium text-[#8F8778] tracking-wider px-1">
                 Border Style
               </span>
               <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 px-0.5">
-                {BORDER_OPTIONS.map((opt) => {
+                {BORDER_OPTIONS.map((opt, idx) => {
                   const isActive = selectedBorder === opt.id;
                   return (
-                    <button
-                      key={opt.id}
-                      onClick={() => setSelectedBorder(opt.id)}
-                      className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                        isActive
-                          ? "bg-white text-black shadow-md scale-102"
-                          : "bg-white/10 text-white/80 hover:bg-white/15"
-                      }`}
-                    >
-                      <span className="text-sm">{opt.icon}</span>
-                      <span>{opt.name}</span>
-                    </button>
+                    <div key={opt.id} className="flex items-center shrink-0">
+                      <button
+                        onClick={() => setSelectedBorder(opt.id)}
+                        className={`shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-xs font-medium tracking-wide transition-all ${
+                          isActive
+                            ? "bg-[#F7A87A] text-[#FAF6EB] border border-[#F7A87A] font-semibold shadow-xs"
+                            : "bg-[#FAF6EB] text-[#F7A87A] border border-[#F7A87A] hover:bg-[#F5F0DF]"
+                        }`}
+                      >
+                        <span className="text-sm">{opt.icon}</span>
+                        <span>{opt.name}</span>
+                      </button>
+                      {idx < BORDER_OPTIONS.length - 1 && (
+                        <span className="h-4 w-px bg-[#D9D3C1] mx-1.5 shrink-0" />
+                      )}
+                    </div>
                   );
                 })}
               </div>
@@ -463,37 +480,41 @@ export default function PhotoBooth() {
 
             {/* 2. Instagram Filters Selector */}
             <div className="flex flex-col gap-1">
-              <span className="text-[10px] uppercase font-bold text-white/50 tracking-wider px-1">
+              <span className="text-[10px] uppercase font-medium text-[#8F8778] tracking-wider px-1">
                 Instagram Filter
               </span>
               <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 px-0.5">
-                {FILTER_OPTIONS.map((f) => {
+                {FILTER_OPTIONS.map((f, idx) => {
                   const isActive = selectedFilter === f.id;
                   return (
-                    <button
-                      key={f.id}
-                      onClick={() => setSelectedFilter(f.id)}
-                      className={`shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                        isActive
-                          ? "bg-gradient-to-r from-amber-500 to-pink-500 text-white shadow-md scale-102"
-                          : "bg-white/10 text-white/80 hover:bg-white/15"
-                      }`}
-                    >
-                      <span
-                        className="w-2.5 h-2.5 rounded-full border border-white/30"
-                        style={{ backgroundColor: f.previewColor }}
-                      />
-                      <span>{f.name}</span>
-                    </button>
+                    <div key={f.id} className="flex items-center shrink-0">
+                      <button
+                        onClick={() => setSelectedFilter(f.id)}
+                        className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium tracking-wide transition-all ${
+                          isActive
+                            ? "bg-[#F7A87A] text-[#FAF6EB] border border-[#F7A87A] font-semibold shadow-xs"
+                            : "bg-[#FAF6EB] text-[#F7A87A] border border-[#F7A87A] hover:bg-[#F5F0DF]"
+                        }`}
+                      >
+                        <span
+                          className="w-2.5 h-2.5 rounded-full border border-black/10 shrink-0"
+                          style={{ backgroundColor: f.previewColor }}
+                        />
+                        <span>{f.name}</span>
+                      </button>
+                      {idx < FILTER_OPTIONS.length - 1 && (
+                        <span className="h-4 w-px bg-[#D9D3C1] mx-1.5 shrink-0" />
+                      )}
+                    </div>
                   );
                 })}
               </div>
             </div>
           </div>
 
-          {/* Photo Strip Scrollable Canvas Preview */}
+          {/* Photo Strip Scrollable Preview (Floats over the gradient wave animation) */}
           <div className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar px-6 py-6 flex items-start justify-center">
-            <div className="relative max-w-[320px] w-full rounded-md shadow-[0_24px_60px_rgba(0,0,0,0.9)] border border-white/10 overflow-hidden transform transition-transform">
+            <div className="relative max-w-[320px] w-full rounded-md shadow-[0_24px_60px_rgba(0,0,0,0.85)] border border-white/20 overflow-hidden transform transition-transform">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={stripResult.dataUrl}
@@ -503,19 +524,19 @@ export default function PhotoBooth() {
             </div>
           </div>
 
-          {/* Bottom Action Bar */}
-          <div className="shrink-0 p-4 bg-neutral-900/95 backdrop-blur-xl border-t border-white/10 flex items-center gap-3 z-20">
+          {/* Bottom Action Bar in warm cream with matching buttons */}
+          <div className="shrink-0 p-4 bg-[#FAF6EB]/95 backdrop-blur-xl border-t border-[#D9D3C1] flex items-center gap-3 z-20 shadow-lg">
             <button
               onClick={handleRetake}
-              className="flex-1 h-13 rounded-2xl bg-white/10 hover:bg-white/15 active:scale-98 transition-all flex items-center justify-center gap-2 text-sm font-semibold text-white border border-white/10"
+              className="flex-1 h-12 rounded-md bg-[#FAF6EB] border border-[#F7A87A] text-[#F7A87A] hover:bg-[#F5F0DF] active:scale-98 transition-all flex items-center justify-center gap-2 text-xs font-semibold tracking-wider uppercase shadow-xs"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="w-5 h-5 text-white/80"
+                className="w-4 h-4"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
-                strokeWidth="2"
+                strokeWidth="2.2"
               >
                 <path
                   strokeLinecap="round"
@@ -528,15 +549,15 @@ export default function PhotoBooth() {
 
             <button
               onClick={handleSaveOrShare}
-              className="flex-[2] h-13 rounded-2xl bg-white text-black hover:bg-neutral-100 active:scale-98 transition-all flex items-center justify-center gap-2 text-sm font-bold shadow-lg"
+              className="flex-[2] h-12 rounded-md bg-[#F7A87A] border border-[#F7A87A] text-[#FAF6EB] hover:bg-[#F59E6C] active:scale-98 transition-all flex items-center justify-center gap-2 text-xs font-semibold tracking-wider uppercase shadow-sm"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="w-5 h-5 text-black"
+                className="w-4 h-4 text-[#FAF6EB]"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
-                strokeWidth="2.2"
+                strokeWidth="2.4"
               >
                 <path
                   strokeLinecap="round"
@@ -552,11 +573,11 @@ export default function PhotoBooth() {
 
       {/* 3. CAMERA PERMISSION DENIED SCREEN */}
       {appState === "permission_denied" && (
-        <div className="relative w-full h-full flex flex-col items-center justify-center px-6 text-center bg-neutral-950">
-          <div className="w-20 h-20 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 mb-6">
+        <div className="relative w-full h-full flex flex-col items-center justify-center px-6 text-center bg-black/40 backdrop-blur-md">
+          <div className="w-20 h-20 rounded-2xl bg-[#FAF6EB]/90 border border-[#F7A87A] flex items-center justify-center text-[#F7A87A] mb-6 shadow-md">
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className="w-10 h-10"
+              className="w-9 h-9"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -571,34 +592,34 @@ export default function PhotoBooth() {
             </svg>
           </div>
 
-          <h2 className="text-2xl font-bold text-white mb-2">Camera Access Required</h2>
-          <p className="text-neutral-400 text-sm max-w-sm mb-6 leading-relaxed">
+          <h2 className="text-2xl font-bold text-[#FAF6EB] mb-2 drop-shadow">Camera Access Required</h2>
+          <p className="text-neutral-300 text-sm max-w-sm mb-6 leading-relaxed">
             Photo Booth needs access to your front camera to take photo strips.
           </p>
 
-          <div className="w-full max-w-sm bg-neutral-900 border border-white/10 rounded-2xl p-5 text-left mb-8 space-y-3.5 text-xs text-neutral-300">
-            <p className="font-semibold text-white text-sm">How to turn it on in Safari:</p>
+          <div className="w-full max-w-sm bg-[#FAF6EB]/95 border border-[#D9D3C1] rounded-xl p-5 text-left mb-8 space-y-3.5 text-xs text-[#736B5E] shadow-xl">
+            <p className="font-semibold text-[#3D372E] text-sm">How to turn it on in Safari:</p>
             <div className="flex items-start gap-3">
-              <span className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center font-bold text-white shrink-0">1</span>
-              <span>Tap the <strong>&quot;aA&quot;</strong> or Settings icon on the left side of Safari&apos;s address bar.</span>
+              <span className="w-5 h-5 rounded-md bg-[#FAF6EB] border border-[#F7A87A] flex items-center justify-center font-bold text-[#F7A87A] shrink-0">1</span>
+              <span>Tap the <strong>&quot;aA&quot;</strong> or Settings icon in Safari&apos;s address bar.</span>
             </div>
             <div className="flex items-start gap-3">
-              <span className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center font-bold text-white shrink-0">2</span>
+              <span className="w-5 h-5 rounded-md bg-[#FAF6EB] border border-[#F7A87A] flex items-center justify-center font-bold text-[#F7A87A] shrink-0">2</span>
               <span>Tap <strong>Website Settings</strong>.</span>
             </div>
             <div className="flex items-start gap-3">
-              <span className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center font-bold text-white shrink-0">3</span>
+              <span className="w-5 h-5 rounded-md bg-[#FAF6EB] border border-[#F7A87A] flex items-center justify-center font-bold text-[#F7A87A] shrink-0">3</span>
               <span>Under <strong>Camera</strong>, select <strong>Allow</strong>.</span>
             </div>
             <div className="flex items-start gap-3">
-              <span className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center font-bold text-white shrink-0">4</span>
+              <span className="w-5 h-5 rounded-md bg-[#FAF6EB] border border-[#F7A87A] flex items-center justify-center font-bold text-[#F7A87A] shrink-0">4</span>
               <span>Tap &quot;Try Again&quot; below or refresh this page.</span>
             </div>
           </div>
 
           <button
             onClick={() => startCamera(facingMode)}
-            className="w-full max-w-sm h-14 rounded-2xl bg-white text-black font-bold text-base active:scale-95 transition-transform shadow-lg"
+            className="w-full max-w-sm h-13 rounded-md bg-[#F7A87A] border border-[#F7A87A] text-[#FAF6EB] font-bold text-sm tracking-wider uppercase active:scale-95 transition-transform shadow-lg"
           >
             Try Again
           </button>
@@ -607,9 +628,9 @@ export default function PhotoBooth() {
 
       {/* iOS Add to Home Screen Instructions Modal */}
       {showInstallTip && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex flex-col justify-end p-4">
-          <div className="w-full bg-neutral-900 border border-white/15 rounded-3xl p-6 text-center space-y-4 shadow-2xl">
-            <div className="w-12 h-12 rounded-2xl bg-white/10 mx-auto flex items-center justify-center text-white">
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex flex-col justify-end p-4">
+          <div className="w-full bg-[#FAF6EB] border border-[#D9D3C1] rounded-2xl p-6 text-center space-y-4 shadow-2xl">
+            <div className="w-12 h-12 rounded-xl bg-[#FAF6EB] border border-[#F7A87A] mx-auto flex items-center justify-center text-[#F7A87A]">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="w-6 h-6"
@@ -625,27 +646,27 @@ export default function PhotoBooth() {
                 />
               </svg>
             </div>
-            <h3 className="text-lg font-bold text-white">Install on iPhone</h3>
-            <p className="text-sm text-neutral-300 leading-relaxed">
-              Install Photo Booth on your home screen to launch it full screen like a native app without the Safari browser bar:
+            <h3 className="text-lg font-bold text-[#3D372E]">Install on iPhone</h3>
+            <p className="text-xs text-[#736B5E] leading-relaxed">
+              Install Photo Booth to your home screen to launch full screen like a native app without the Safari address bar:
             </p>
-            <div className="text-left text-xs text-neutral-300 space-y-2.5 bg-black/40 p-4 rounded-xl border border-white/10">
+            <div className="text-left text-xs text-[#736B5E] space-y-2.5 bg-[#FAF6EB] p-4 rounded-xl border border-[#D9D3C1]">
               <div className="flex items-center gap-2">
-                <span className="font-bold text-white">1.</span>
+                <span className="font-bold text-[#F7A87A]">1.</span>
                 <span>Tap the <strong>Share</strong> button (⎙) at the bottom of Safari.</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="font-bold text-white">2.</span>
+                <span className="font-bold text-[#F7A87A]">2.</span>
                 <span>Scroll down and select <strong>&quot;Add to Home Screen&quot;</strong>.</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="font-bold text-white">3.</span>
+                <span className="font-bold text-[#F7A87A]">3.</span>
                 <span>Tap <strong>Add</strong> in the top-right corner.</span>
               </div>
             </div>
             <button
               onClick={() => setShowInstallTip(false)}
-              className="w-full h-12 rounded-xl bg-white/15 text-white font-semibold text-sm active:scale-95 transition-transform"
+              className="w-full h-12 rounded-md bg-[#F7A87A] border border-[#F7A87A] text-[#FAF6EB] font-semibold text-xs tracking-wider uppercase active:scale-95 transition-transform shadow-xs"
             >
               Got it
             </button>
