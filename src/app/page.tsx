@@ -20,7 +20,7 @@ export default function PhotoBooth() {
   const [currentShotIndex, setCurrentShotIndex] = useState<number>(0);
   const [capturedPhotos, setCapturedPhotos] = useState<string[]>([]);
   const [isLightFlooding, setIsLightFlooding] = useState<boolean>(false);
-  const [selectedBorder, setSelectedBorder] = useState<BorderStyle>("film");
+  const [selectedBorder, setSelectedBorder] = useState<BorderStyle>("concert");
   const [selectedFilter, setSelectedFilter] = useState<InstagramFilter>("normal");
   const [stripResult, setStripResult] = useState<{ blob: Blob; dataUrl: string } | null>(null);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
@@ -129,7 +129,7 @@ export default function PhotoBooth() {
   const startPhotoSequence = async () => {
     if (isCapturingRef.current) return;
     isCapturingRef.current = true;
-    getAudioContext(); // Unlock audio on user tap
+    getAudioContext();
     setAppState("countdown");
     const photos: string[] = [];
 
@@ -168,13 +168,13 @@ export default function PhotoBooth() {
 
         // Intermission between shots
         if (shot < 3) {
-          await wait(750);
+          await wait(800);
         }
       }
 
       // Photos completed -> render strip
       setAppState("processing");
-      await wait(300);
+      await wait(350);
 
       const strip = await generatePhotoStrip(photos, {
         border: selectedBorder,
@@ -296,38 +296,21 @@ export default function PhotoBooth() {
         </div>
       )}
 
-      {/* 1. CAMERA VIEW */}
+      {/* 1. CLEAR DEDICATED PHOTO-TAKING STUDIO VIEW */}
       {(appState === "camera" || appState === "countdown" || appState === "processing") && (
-        <div className="relative w-full h-full flex flex-col items-center justify-between overflow-hidden">
-          {/* Live Video Preview (Full Screen with smooth blending) */}
-          <div className="absolute inset-0 z-0 bg-transparent flex items-center justify-center overflow-hidden">
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className={`w-full h-full object-cover ${
-                facingMode === "user" ? "scale-x-[-1]" : ""
-              }`}
-            />
-            {/* Subtle atmospheric vignette framing camera */}
-            <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-black/40 via-transparent to-black/60" />
-          </div>
-
-          {/* Top Bar Header (Styled in warm cream & apricot border) */}
-          <div className="relative z-20 w-full pt-3 px-4 flex items-center justify-between">
-            {/* App Title badge */}
-            <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-md bg-[#FAF6EB]/95 backdrop-blur-md border border-[#F7A87A] text-xs font-medium tracking-wider uppercase text-[#F7A87A] shadow-sm">
+        <div className="relative w-full h-full flex flex-col items-center justify-between p-3 overflow-hidden">
+          {/* Top Studio Header */}
+          <div className="w-full max-w-md pt-2 px-1 flex items-center justify-between z-20">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-[#FAF6EB]/95 backdrop-blur-md border border-[#F7A87A] text-xs font-semibold tracking-wider uppercase text-[#F7A87A] shadow-sm">
               <span className="w-2 h-2 rounded-full bg-[#F7A87A] animate-pulse" />
-              Photo Booth
+              Photo Studio
             </div>
 
-            {/* Top Buttons with exact reference styling */}
             <div className="flex items-center gap-2">
               {!isStandalone && (
                 <button
                   onClick={() => setShowInstallTip(true)}
-                  className="px-3.5 py-1.5 rounded-md bg-[#FAF6EB]/95 backdrop-blur-md border border-[#F7A87A] text-xs font-medium tracking-wider uppercase text-[#F7A87A] active:scale-95 transition-transform shadow-sm"
+                  className="px-3 py-1.5 rounded-md bg-[#FAF6EB]/95 backdrop-blur-md border border-[#F7A87A] text-xs font-medium tracking-wider uppercase text-[#F7A87A] active:scale-95 transition-transform shadow-sm"
                 >
                   Install App
                 </button>
@@ -337,7 +320,7 @@ export default function PhotoBooth() {
                 onClick={toggleCameraFacing}
                 disabled={appState !== "camera"}
                 aria-label="Switch camera"
-                className="w-9 h-9 rounded-md bg-[#FAF6EB]/95 backdrop-blur-md border border-[#F7A87A] flex items-center justify-center text-[#F7A87A] active:scale-90 transition-transform disabled:opacity-40 shadow-sm"
+                className="w-8 h-8 rounded-md bg-[#FAF6EB]/95 backdrop-blur-md border border-[#F7A87A] flex items-center justify-center text-[#F7A87A] active:scale-90 transition-transform disabled:opacity-40 shadow-sm"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -357,89 +340,153 @@ export default function PhotoBooth() {
             </div>
           </div>
 
-          {/* 3-2-1 Countdown & Shot Indicator Center Overlay */}
-          {appState === "countdown" && (
-            <div className="relative z-30 flex-1 flex flex-col items-center justify-center pointer-events-none">
-              <div className="mb-4 px-4 py-1.5 rounded-md bg-[#FAF6EB]/95 backdrop-blur-md border border-[#F7A87A] text-xs font-semibold tracking-wider uppercase text-[#F7A87A] shadow-md">
-                Photo {currentShotIndex} of 4
+          {/* CLEAR DEDICATED VIEWFINDER SECTION */}
+          <div className="relative w-full max-w-sm flex-1 my-2 flex flex-col items-center justify-center">
+            {/* Viewfinder Outer Frame Bezel */}
+            <div className="relative w-full aspect-[3/4] max-h-[64vh] rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.85)] border-2 border-[#FAF6EB]/40 bg-neutral-950 flex items-center justify-center">
+              {/* Live Video Feed */}
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className={`w-full h-full object-cover ${
+                  facingMode === "user" ? "scale-x-[-1]" : ""
+                }`}
+              />
+
+              {/* Viewfinder Corner Crop Marks [  ] */}
+              <div className="absolute inset-3 pointer-events-none border border-white/10 rounded-xl">
+                <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-[#F7A87A]" />
+                <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-[#F7A87A]" />
+                <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-[#F7A87A]" />
+                <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-[#F7A87A]" />
               </div>
 
-              {countdownNumber !== null ? (
-                <div
-                  key={`${currentShotIndex}-${countdownNumber}`}
-                  className="w-36 h-36 rounded-2xl bg-[#FAF6EB]/90 backdrop-blur-xl border-2 border-[#F7A87A] flex items-center justify-center text-8xl font-black text-[#F7A87A] shadow-2xl animate-countdown-pop drop-shadow-[0_10px_25px_rgba(0,0,0,0.5)]"
-                >
-                  {countdownNumber}
-                </div>
-              ) : (
-                <div className="text-3xl font-extrabold tracking-widest text-[#FAF6EB] uppercase drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)]">
-                  Smile!
+              {/* Viewfinder Top Status Badge */}
+              <div className="absolute top-4 left-4 right-4 flex items-center justify-between pointer-events-none">
+                <span className="px-2.5 py-1 rounded-md bg-black/50 backdrop-blur-md border border-white/15 text-[10px] font-semibold tracking-widest uppercase text-white/90">
+                  {appState === "countdown"
+                    ? `SHOT ${currentShotIndex} OF 4`
+                    : "STAND BY • 4 SHOTS"}
+                </span>
+
+                <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-600/80 text-[10px] font-bold text-white tracking-wider">
+                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                  REC
+                </span>
+              </div>
+
+              {/* Big Animated 3-2-1 Countdown Overlay inside the Viewfinder */}
+              {appState === "countdown" && (
+                <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/35 backdrop-blur-[2px] pointer-events-none">
+                  {countdownNumber !== null ? (
+                    <div
+                      key={`${currentShotIndex}-${countdownNumber}`}
+                      className="w-32 h-32 rounded-2xl bg-[#FAF6EB]/95 backdrop-blur-md border-2 border-[#F7A87A] flex items-center justify-center text-7xl font-black text-[#F7A87A] shadow-2xl animate-countdown-pop drop-shadow-[0_8px_20px_rgba(0,0,0,0.5)]"
+                    >
+                      {countdownNumber}
+                    </div>
+                  ) : (
+                    <div className="text-3xl font-extrabold tracking-widest text-[#FAF6EB] uppercase drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)]">
+                      Pose!
+                    </div>
+                  )}
+
+                  {/* Shot progress pills inside viewfinder */}
+                  <div className="mt-6 flex items-center gap-1.5 bg-black/60 px-3 py-1.5 rounded-full border border-white/20">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div
+                        key={i}
+                        className={`h-2 rounded-full transition-all duration-300 ${
+                          i < currentShotIndex
+                            ? "w-6 bg-[#F7A87A]"
+                            : i === currentShotIndex
+                            ? "w-6 bg-white animate-pulse"
+                            : "w-2 bg-white/30"
+                        }`}
+                      />
+                    ))}
+                  </div>
                 </div>
               )}
 
-              {/* 4 dots progress indicator */}
-              <div className="mt-8 flex items-center gap-2">
-                {[1, 2, 3, 4].map((i) => (
+              {/* Developing / Processing Overlay */}
+              {appState === "processing" && (
+                <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/75 backdrop-blur-md">
+                  <div className="w-12 h-12 border-4 border-[#FAF6EB]/30 border-t-[#F7A87A] rounded-full animate-spin mb-4" />
+                  <p className="text-xs font-semibold tracking-wider uppercase text-[#FAF6EB]">
+                    Developing Paper Strip...
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Live 4-Photo Thumbnail Strip Slots underneath viewfinder */}
+            <div className="w-full max-w-sm mt-3 flex items-center justify-between gap-2 px-2">
+              {[0, 1, 2, 3].map((idx) => {
+                const photo = capturedPhotos[idx];
+                const isCurrent = appState === "countdown" && currentShotIndex === idx + 1;
+                return (
                   <div
-                    key={i}
-                    className={`h-2 rounded-full transition-all duration-300 ${
-                      i < currentShotIndex
-                        ? "w-8 bg-[#F7A87A]"
-                        : i === currentShotIndex
-                        ? "w-8 bg-white animate-pulse"
-                        : "w-2 bg-white/40"
+                    key={idx}
+                    className={`flex-1 aspect-[4/3] rounded-md border overflow-hidden flex items-center justify-center relative transition-all ${
+                      photo
+                        ? "border-[#F7A87A] shadow-xs"
+                        : isCurrent
+                        ? "border-[#FAF6EB] bg-white/20 animate-pulse"
+                        : "border-white/15 bg-black/40"
                     }`}
-                  />
-                ))}
-              </div>
+                  >
+                    {photo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={photo}
+                        alt={`Shot ${idx + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-[10px] font-bold text-white/40">
+                        0{idx + 1}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-          )}
+          </div>
 
-          {/* Processing overlay */}
-          {appState === "processing" && (
-            <div className="relative z-30 flex-1 flex flex-col items-center justify-center bg-black/40 backdrop-blur-md">
-              <div className="w-12 h-12 border-4 border-[#FAF6EB]/30 border-t-[#F7A87A] rounded-full animate-spin mb-4" />
-              <p className="text-sm font-semibold tracking-wider uppercase text-[#FAF6EB]">
-                Developing photo strip...
-              </p>
-            </div>
-          )}
-
-          {appState === "camera" && <div className="flex-1" />}
-
-          {/* Bottom Shutter Controls with reference button design */}
-          <div className="relative z-20 w-full pb-8 pt-4 flex flex-col items-center justify-center px-4">
+          {/* DEDICATED BOTTOM SHUTTER CONTROLS DOCK */}
+          <div className="relative z-20 w-full max-w-sm pb-4 pt-1 flex flex-col items-center justify-center">
             {appState === "camera" && (
-              <div className="flex flex-col items-center gap-3 w-full max-w-xs">
-                <span className="text-[11px] font-medium tracking-wider uppercase text-[#FAF6EB] drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                  4 photos in a row • flash &amp; sound
-                </span>
-
-                {/* Shutter Button styled in warm cream with delicate peach border */}
+              <div className="w-full flex flex-col items-center gap-2">
                 <button
                   onClick={startPhotoSequence}
                   aria-label="Take 4 photos"
-                  className="w-full h-14 rounded-md bg-[#FAF6EB]/95 backdrop-blur-md border-1.5 border-[#F7A87A] flex items-center justify-center gap-3 text-sm font-semibold tracking-wider uppercase text-[#F7A87A] active:scale-98 transition-all shadow-lg hover:bg-[#FAF6EB]"
+                  className="w-full h-14 rounded-md bg-[#FAF6EB] border-1.5 border-[#F7A87A] flex items-center justify-center gap-3 text-sm font-semibold tracking-wider uppercase text-[#F7A87A] active:scale-98 transition-all shadow-lg hover:bg-[#F5F0DF]"
                 >
-                  <span className="w-3.5 h-3.5 rounded-full border border-[#F7A87A] bg-[#F7A87A]/30 flex items-center justify-center">
+                  <span className="w-3.5 h-3.5 rounded-full border border-[#F7A87A] bg-[#F7A87A]/20 flex items-center justify-center">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#F7A87A]" />
                   </span>
-                  Take 4 Photos
+                  Take 4 Photos In A Row
                 </button>
+                <span className="text-[10px] font-medium tracking-wide text-[#FAF6EB]/70 drop-shadow">
+                  3-2-1 countdown &bull; screen flash &bull; real paper finish
+                </span>
               </div>
             )}
           </div>
         </div>
       )}
 
-      {/* 2. RESULTS VIEW (Floating above gentle undulating gradient wave ripple) */}
+      {/* 2. RESULTS VIEW (Floating Real Paper Strip on Gradient Wave Background) */}
       {appState === "results" && stripResult && (
         <div className="relative w-full h-full flex flex-col bg-transparent">
-          {/* Top Customization Panel in warm cream with reference border buttons */}
+          {/* Top Customization Panel */}
           <div className="shrink-0 pt-2 pb-2.5 px-3 flex flex-col gap-2.5 bg-[#FAF6EB]/95 backdrop-blur-xl border-b border-[#D9D3C1] z-20 shadow-sm">
             <div className="flex items-center justify-between px-1">
               <h2 className="text-xs font-semibold tracking-wider uppercase text-[#736B5E]">
-                Customize Photo Strip
+                Select Real Paper Style
               </h2>
               {saveStatus && (
                 <span className="text-[10px] font-semibold text-[#F7A87A] bg-[#FAF6EB] border border-[#F7A87A] px-2.5 py-0.5 rounded-md shadow-xs">
@@ -448,10 +495,10 @@ export default function PhotoBooth() {
               )}
             </div>
 
-            {/* 1. Border Style Selector (Stamp, Vintage Film, Polaroid, etc.) */}
+            {/* 1. Realistic Paper Border Styles Selector */}
             <div className="flex flex-col gap-1">
               <span className="text-[10px] uppercase font-medium text-[#8F8778] tracking-wider px-1">
-                Border Style
+                Paper Style
               </span>
               <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 px-0.5">
                 {BORDER_OPTIONS.map((opt, idx) => {
@@ -466,7 +513,7 @@ export default function PhotoBooth() {
                             : "bg-[#FAF6EB] text-[#F7A87A] border border-[#F7A87A] hover:bg-[#F5F0DF]"
                         }`}
                       >
-                        <span className="text-sm">{opt.icon}</span>
+                        <span className="text-sm font-bold">{opt.icon}</span>
                         <span>{opt.name}</span>
                       </button>
                       {idx < BORDER_OPTIONS.length - 1 && (
@@ -512,19 +559,28 @@ export default function PhotoBooth() {
             </div>
           </div>
 
-          {/* Photo Strip Scrollable Preview (Floats over the gradient wave animation) */}
+          {/* REALISTIC PHYSICAL PAPER PREVIEW */}
           <div className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar px-6 py-6 flex items-start justify-center">
-            <div className="relative max-w-[320px] w-full rounded-md shadow-[0_24px_60px_rgba(0,0,0,0.85)] border border-white/20 overflow-hidden transform transition-transform">
+            {/* Physical paper card with tactile drop shadow and paper edge */}
+            <div
+              className={`relative ${
+                selectedBorder === "party" ? "max-w-[340px]" : "max-w-[300px]"
+              } w-full rounded-xs overflow-hidden transition-transform`}
+              style={{
+                boxShadow:
+                  "0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 20px 40px -4px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.15)",
+              }}
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={stripResult.dataUrl}
-                alt="Your customized photo booth strip"
+                alt="Realistic paper photo booth strip"
                 className="w-full h-auto object-contain block"
               />
             </div>
           </div>
 
-          {/* Bottom Action Bar in warm cream with matching buttons */}
+          {/* Bottom Action Bar */}
           <div className="shrink-0 p-4 bg-[#FAF6EB]/95 backdrop-blur-xl border-t border-[#D9D3C1] flex items-center gap-3 z-20 shadow-lg">
             <button
               onClick={handleRetake}

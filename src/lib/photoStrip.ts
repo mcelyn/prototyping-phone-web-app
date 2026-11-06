@@ -1,4 +1,4 @@
-export type BorderStyle = "film" | "stamp" | "polaroid" | "classic" | "noir" | "pastel";
+export type BorderStyle = "concert" | "editorial" | "korean" | "party";
 
 export type InstagramFilter =
   | "normal"
@@ -17,12 +17,30 @@ export interface PhotoStripOptions {
 }
 
 export const BORDER_OPTIONS: { id: BorderStyle; name: string; icon: string; desc: string }[] = [
-  { id: "film", name: "Vintage Film", icon: "🎞️", desc: "35mm sprocket film roll" },
-  { id: "stamp", name: "Postage Stamp", icon: "📮", desc: "Perforated edges & postmark" },
-  { id: "polaroid", name: "Polaroid", icon: "📷", desc: "Classic instant film with chin" },
-  { id: "classic", name: "Classic Booth", icon: "⚪", desc: "Clean studio white" },
-  { id: "noir", name: "Matte Noir", icon: "⚫", desc: "Deep dark cinema" },
-  { id: "pastel", name: "Y2K Pastel", icon: "🌸", desc: "Blush pink Korean booth" },
+  {
+    id: "concert",
+    name: "Concert Strip",
+    icon: "★",
+    desc: "Heavy matte cardstock with black stars & concert stamp",
+  },
+  {
+    id: "editorial",
+    name: "Editorial Beauty",
+    icon: "◆",
+    desc: "Luxury event strip with brand sub-headers & clean footer",
+  },
+  {
+    id: "korean",
+    name: "Art Exhibition",
+    icon: "✒️",
+    desc: "Warm linen paper with cursive script & frame indices",
+  },
+  {
+    id: "party",
+    name: "2x2 Block Party",
+    icon: "⚏",
+    desc: "2x2 grid card with bold street festival banners",
+  },
 ];
 
 export const FILTER_OPTIONS: { id: InstagramFilter; name: string; previewColor: string }[] = [
@@ -37,43 +55,92 @@ export const FILTER_OPTIONS: { id: InstagramFilter; name: string; previewColor: 
 ];
 
 /**
+ * Apply realistic paper fiber & micro-grain texture across the entire strip
+ */
+function applyRealisticPaperTexture(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  paperType: "matte" | "linen" | "cardstock" | "gloss"
+) {
+  ctx.save();
+  // Create noise buffer for realistic tactile paper grain
+  const noiseCanvas = document.createElement("canvas");
+  noiseCanvas.width = 300;
+  noiseCanvas.height = 300;
+  const nCtx = noiseCanvas.getContext("2d");
+  if (!nCtx) {
+    ctx.restore();
+    return;
+  }
+
+  const imgData = nCtx.createImageData(300, 300);
+  const data = imgData.data;
+
+  for (let i = 0; i < data.length; i += 4) {
+    const val = Math.floor(Math.random() * 255);
+    // Natural paper fiber variation
+    const isFiber = Math.random() < 0.002;
+    data[i] = isFiber ? 80 : val;
+    data[i + 1] = isFiber ? 70 : val;
+    data[i + 2] = isFiber ? 60 : val;
+    data[i + 3] = isFiber ? 28 : Math.random() < 0.25 ? 12 : 6;
+  }
+  nCtx.putImageData(imgData, 0, 0);
+
+  // Pattern overlay in soft-light mode for authentic physical feel
+  ctx.globalCompositeOperation = "soft-light";
+  const pattern = ctx.createPattern(noiseCanvas, "repeat");
+  if (pattern) {
+    ctx.fillStyle = pattern;
+    ctx.fillRect(0, 0, width, height);
+  }
+
+  // Subtle natural paper perimeter shading
+  ctx.globalCompositeOperation = "multiply";
+  const vignette = ctx.createRadialGradient(
+    width / 2,
+    height / 2,
+    Math.min(width, height) * 0.45,
+    width / 2,
+    height / 2,
+    Math.max(width, height) * 0.75
+  );
+  vignette.addColorStop(0, "rgba(255, 255, 255, 0)");
+  vignette.addColorStop(1, "rgba(40, 35, 30, 0.04)");
+  ctx.fillStyle = vignette;
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.restore();
+}
+
+/**
  * Apply authentic Instagram filter curves & tone overlays
  */
 function applyInstagramFilter(
   ctx: CanvasRenderingContext2D,
-  filter: InstagramFilter,
-  x: number,
-  y: number,
-  w: number,
-  h: number
+  filter: InstagramFilter
 ) {
   switch (filter) {
     case "clarendon":
-      // Cool blue shadows, warm highlights, boosted contrast
       ctx.filter = "contrast(120%) saturate(125%) brightness(104%)";
       break;
     case "gingham":
-      // Vintage muted, soft lifted blacks
       ctx.filter = "contrast(92%) saturate(85%) brightness(105%) sepia(8%)";
       break;
     case "juno":
-      // Rich warm tones, deep saturation, punchy
       ctx.filter = "contrast(115%) saturate(132%) brightness(102%)";
       break;
     case "lark":
-      // Bright, airy, cooled highlights, desaturated warm tones
       ctx.filter = "contrast(106%) saturate(110%) brightness(108%) hue-rotate(-5deg)";
       break;
     case "valencia":
-      // 1970s warm antique yellow fade
       ctx.filter = "sepia(26%) contrast(108%) brightness(105%) saturate(108%)";
       break;
     case "moon":
-      // Moody contrasty monochrome
       ctx.filter = "grayscale(100%) contrast(124%) brightness(103%)";
       break;
     case "slumber":
-      // Dreamy retro haze with rose/yellow tint
       ctx.filter = "sepia(20%) saturate(86%) brightness(104%) contrast(96%)";
       break;
     default:
@@ -83,7 +150,7 @@ function applyInstagramFilter(
 }
 
 /**
- * Second-pass overlay for filters that need color grading blend modes
+ * Filter blend overlays
  */
 function applyFilterOverlay(
   ctx: CanvasRenderingContext2D,
@@ -97,8 +164,8 @@ function applyFilterOverlay(
     ctx.save();
     ctx.globalCompositeOperation = "soft-light";
     const grad = ctx.createLinearGradient(x, y, x, y + h);
-    grad.addColorStop(0, "rgba(255, 235, 200, 0.15)"); // warm top
-    grad.addColorStop(1, "rgba(0, 60, 160, 0.22)"); // cool blue shadows
+    grad.addColorStop(0, "rgba(255, 235, 200, 0.15)");
+    grad.addColorStop(1, "rgba(0, 60, 160, 0.22)");
     ctx.fillStyle = grad;
     ctx.fillRect(x, y, w, h);
     ctx.restore();
@@ -111,7 +178,7 @@ function applyFilterOverlay(
   } else if (filter === "gingham") {
     ctx.save();
     ctx.globalCompositeOperation = "screen";
-    ctx.fillStyle = "rgba(35, 45, 60, 0.12)"; // lift blacks
+    ctx.fillStyle = "rgba(35, 45, 60, 0.12)";
     ctx.fillRect(x, y, w, h);
     ctx.restore();
   } else if (filter === "juno") {
@@ -130,217 +197,79 @@ function applyFilterOverlay(
 }
 
 /**
- * Draw authentic 35mm film sprockets and golden frame numbers
+ * Helper to draw image with aspect fill
  */
-function drawFilmAccents(
+function drawAspectFill(
   ctx: CanvasRenderingContext2D,
-  width: number,
-  height: number,
-  count: number,
-  photoH: number,
-  gap: number,
-  paddingTop: number
+  img: HTMLImageElement,
+  dx: number,
+  dy: number,
+  dw: number,
+  dh: number
 ) {
-  // Sprocket hole dimensions
-  const sprocketW = 54;
-  const sprocketH = 76;
-  const sprocketRadius = 10;
-  const sprocketStep = 108; // distance between holes
+  const imgRatio = img.width / img.height;
+  const targetRatio = dw / dh;
 
-  const leftMargin = 38;
-  const rightMargin = width - leftMargin - sprocketW;
+  let sx = 0,
+    sy = 0,
+    sWidth = img.width,
+    sHeight = img.height;
 
-  const totalHoles = Math.floor(height / sprocketStep);
-
-  for (let i = 0; i < totalHoles; i++) {
-    const holeY = i * sprocketStep + (height % sprocketStep) / 2;
-
-    // Draw sprocket hole (translucent white cut-out appearance)
-    [leftMargin, rightMargin].forEach((hx) => {
-      ctx.save();
-      ctx.fillStyle = "#FFFFFF";
-      ctx.beginPath();
-      ctx.roundRect(hx, holeY, sprocketW, sprocketH, sprocketRadius);
-      ctx.fill();
-
-      // Subtle 3D inner edge shadow
-      ctx.strokeStyle = "rgba(0, 0, 0, 0.35)";
-      ctx.lineWidth = 3;
-      ctx.stroke();
-      ctx.restore();
-    });
+  if (imgRatio > targetRatio) {
+    sWidth = img.height * targetRatio;
+    sx = (img.width - sWidth) / 2;
+  } else {
+    sHeight = img.width / targetRatio;
+    sy = (img.height - sHeight) / 2;
   }
 
-  // Draw 35mm exposure numbers and film rebate text in classic amber / gold
-  ctx.save();
-  ctx.fillStyle = "#E5A238";
-  ctx.font = "bold 22px 'Courier New', Courier, monospace";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-
-  for (let shot = 0; shot < count; shot++) {
-    const frameNumber = 21 + shot;
-    const shotCenterY = paddingTop + shot * (photoH + gap) + photoH / 2;
-
-    // Left side markings (vertical rotation)
-    ctx.save();
-    ctx.translate(leftMargin + sprocketW + 28, shotCenterY);
-    ctx.rotate(-Math.PI / 2);
-    ctx.fillText(`${frameNumber}A ▶`, 0, 0);
-    ctx.font = "14px 'Courier New', Courier, monospace";
-    ctx.fillText(`KODAK 400`, 0, 20);
-    ctx.restore();
-
-    // Right side markings (vertical rotation)
-    ctx.save();
-    ctx.translate(rightMargin - 28, shotCenterY);
-    ctx.rotate(Math.PI / 2);
-    ctx.fillText(`${frameNumber}`, 0, 0);
-    ctx.font = "14px 'Courier New', Courier, monospace";
-    ctx.fillText(`SAFETY FILM`, 0, 20);
-    ctx.restore();
-  }
-  ctx.restore();
+  ctx.drawImage(img, sx, sy, sWidth, sHeight, dx, dy, dw, dh);
 }
 
 /**
- * Draw authentic postage stamp perforated scalloped edges and postmark cancellation
+ * Helper to draw a solid 5-point star
  */
-function drawStampAccents(
-  ctx: CanvasRenderingContext2D,
-  width: number,
-  height: number,
-  photosCount: number,
-  photoX: number,
-  photoW: number,
-  photoH: number,
-  gap: number,
-  paddingTop: number,
-  dateText: string
-) {
-  ctx.save();
+function drawStar(ctx: CanvasRenderingContext2D, cx: number, cy: number, spikes: number, outerRadius: number, innerRadius: number) {
+  let rot = (Math.PI / 2) * 3;
+  let x = cx;
+  let y = cy;
+  const step = Math.PI / spikes;
 
-  // Perforation hole radius & spacing
-  const radius = 18;
-  const step = 46;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - outerRadius);
+  for (let i = 0; i < spikes; i++) {
+    x = cx + Math.cos(rot) * outerRadius;
+    y = cy + Math.sin(rot) * outerRadius;
+    ctx.lineTo(x, y);
+    rot += step;
 
-  // Draw circular perforation punches along perimeter (cut-outs against dark desktop)
-  ctx.fillStyle = "#121214"; // background desk color to look like real punched perforations
-
-  // Left and Right edge scallops
-  const verticalCount = Math.floor(height / step);
-  for (let i = 0; i <= verticalCount; i++) {
-    const y = i * step + (height % step) / 2;
-    // Left edge
-    ctx.beginPath();
-    ctx.arc(0, y, radius, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Right edge
-    ctx.beginPath();
-    ctx.arc(width, y, radius, 0, Math.PI * 2);
-    ctx.fill();
+    x = cx + Math.cos(rot) * innerRadius;
+    y = cy + Math.sin(rot) * innerRadius;
+    ctx.lineTo(x, y);
+    rot += step;
   }
-
-  // Top and Bottom edge scallops
-  const horizontalCount = Math.floor(width / step);
-  for (let j = 0; j <= horizontalCount; j++) {
-    const x = j * step + (width % step) / 2;
-    // Top edge
-    ctx.beginPath();
-    ctx.arc(x, 0, radius, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Bottom edge
-    ctx.beginPath();
-    ctx.arc(x, height, radius, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // Horizontal divider perforation holes between stamp frames
-  for (let shot = 0; shot < photosCount - 1; shot++) {
-    const dividerY = paddingTop + (shot + 1) * photoH + shot * gap + gap / 2;
-    for (let j = 0; j <= horizontalCount; j++) {
-      const x = j * step + (width % step) / 2;
-      ctx.beginPath();
-      ctx.arc(x, dividerY, 10, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-
-  // Postmark Cancellation Ink Stamps (like media_1793984484503_d5f29b24.png!)
-  ctx.strokeStyle = "rgba(65, 45, 35, 0.45)";
-  ctx.lineWidth = 3;
-  ctx.fillStyle = "rgba(65, 45, 35, 0.45)";
-
-  for (let shot = 0; shot < photosCount; shot++) {
-    const y = paddingTop + shot * (photoH + gap);
-
-    // 1. Wavy postmark cancellation lines
-    const waveStartX = photoX + photoW - 320;
-    const waveStartY = y + 55;
-    for (let line = 0; line < 3; line++) {
-      ctx.beginPath();
-      const lineY = waveStartY + line * 14;
-      ctx.moveTo(waveStartX, lineY);
-      for (let wx = 0; wx < 180; wx += 6) {
-        ctx.lineTo(waveStartX + wx, lineY + Math.sin(wx * 0.12) * 5);
-      }
-      ctx.stroke();
-    }
-
-    // 2. Round rubber postmark ink stamp
-    const stampCx = photoX + photoW - 90;
-    const stampCy = y + 70;
-    const stampRadius = 48;
-
-    ctx.save();
-    ctx.translate(stampCx, stampCy);
-    ctx.rotate(-0.15); // subtle angle
-
-    // Outer circle
-    ctx.beginPath();
-    ctx.arc(0, 0, stampRadius, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // Inner circle
-    ctx.beginPath();
-    ctx.arc(0, 0, stampRadius - 8, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // Text inside postmark
-    ctx.font = "bold 13px 'Courier New', Courier, monospace";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText("AIR MAIL", 0, -18);
-    ctx.font = "11px 'Courier New', Courier, monospace";
-    ctx.fillText(dateText, 0, 4);
-    ctx.fillText("★ BOOTH ★", 0, 20);
-
-    ctx.restore();
-  }
-
-  ctx.restore();
+  ctx.lineTo(cx, cy - outerRadius);
+  ctx.closePath();
+  ctx.fill();
 }
 
 /**
- * Main generator function for high-res photo strips
+ * High-res Photo Strip Generator supporting the 4 exact realistic paper styles
  */
 export async function generatePhotoStrip(
   photoDataUrls: string[],
   options: PhotoStripOptions = {}
 ): Promise<{ blob: Blob; dataUrl: string }> {
   const {
-    border = "classic",
+    border = "concert",
     filter = "normal",
     dateText = new Date().toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    }).toUpperCase(),
+      month: "2-digit",
+      day: "2-digit",
+      year: "2-digit",
+    }),
   } = options;
 
-  // Load photos into HTMLImageElements
   const images = await Promise.all(
     photoDataUrls.map(
       (src) =>
@@ -358,209 +287,303 @@ export async function generatePhotoStrip(
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Could not get canvas context");
 
-  const count = images.length;
+  // =========================================================================
+  // STYLE 1: STAR CONCERT STRIP (Image 1: Ye Live at Gelredome Reference)
+  // =========================================================================
+  if (border === "concert") {
+    const width = 1100;
+    const paddingX = 60;
+    const paddingTop = 90;
+    const gap = 34;
+    const photoW = width - paddingX * 2; // 980
+    const photoH = Math.round(photoW * 0.72); // ~706
+    const footerH = 340;
+    const height = paddingTop + 4 * photoH + 3 * gap + footerH;
 
-  // Layout parameters tailored for each border style
-  let width = 1200;
-  let paddingX = 64;
-  let paddingTop = 64;
-  let gap = 44;
-  let footerH = 200;
-  let bgColor = "#FFFFFF";
-  let textColor = "#2A2A2A";
-  let subtextColor = "#7A7A7A";
-  let frameBorderColor = "rgba(0, 0, 0, 0.08)";
+    canvas.width = width;
+    canvas.height = height;
 
-  if (border === "film") {
-    // 35mm Film Strip layout
-    width = 1240;
-    paddingX = 145; // Sprocket track width
-    paddingTop = 60;
-    gap = 48;
-    footerH = 140;
-    bgColor = "#0A0A0B";
-    textColor = "#E5A238";
-    subtextColor = "#A47426";
-    frameBorderColor = "#000000";
-  } else if (border === "stamp") {
-    // Postage Stamp layout
-    width = 1200;
-    paddingX = 85;
-    paddingTop = 75;
-    gap = 64;
-    footerH = 180;
-    bgColor = "#F6F2EB"; // Antique stamp paper
-    textColor = "#3E3630";
-    subtextColor = "#867B72";
-    frameBorderColor = "rgba(60, 45, 30, 0.15)";
-  } else if (border === "polaroid") {
-    // Polaroid Instant Film layout
-    width = 1200;
-    paddingX = 70;
-    paddingTop = 70;
-    gap = 52;
-    footerH = 280; // Iconic Polaroid bottom chin
-    bgColor = "#FCFCFB";
-    textColor = "#1D1D1F";
-    subtextColor = "#6E6E73";
-    frameBorderColor = "rgba(0, 0, 0, 0.06)";
-  } else if (border === "noir") {
-    // Matte Noir
-    width = 1200;
-    paddingX = 64;
-    paddingTop = 64;
-    gap = 44;
-    footerH = 200;
-    bgColor = "#141416";
-    textColor = "#F5F5F7";
-    subtextColor = "#86868B";
-    frameBorderColor = "rgba(255, 255, 255, 0.1)";
-  } else if (border === "pastel") {
-    // Y2K Pastel Korean Photo Booth
-    width = 1200;
-    paddingX = 64;
-    paddingTop = 64;
-    gap = 44;
-    footerH = 200;
-    bgColor = "#FDE8EF"; // Soft blush
-    textColor = "#831843";
-    subtextColor = "#BE185D";
-    frameBorderColor = "rgba(255, 255, 255, 0.8)";
-  }
+    // Heavy matte white paper base with natural warmth
+    ctx.fillStyle = "#F6F5F2";
+    ctx.fillRect(0, 0, width, height);
 
-  const photoW = width - paddingX * 2;
-  const photoH = Math.round(photoW * 0.75); // 4:3 classic aspect ratio
-  const height = paddingTop + count * photoH + (count - 1) * gap + footerH;
+    // Render photos with realistic print paper inset
+    images.slice(0, 4).forEach((img, i) => {
+      const y = paddingTop + i * (photoH + gap);
 
-  canvas.width = width;
-  canvas.height = height;
-
-  // 1. Draw base background
-  ctx.fillStyle = bgColor;
-  ctx.fillRect(0, 0, width, height);
-
-  // 2. Draw each photo with Instagram filter applied
-  images.forEach((img, index) => {
-    const y = paddingTop + index * (photoH + gap);
-
-    ctx.save();
-
-    // Subtle photo frame rounding for modern borders
-    const radius = border === "polaroid" || border === "classic" ? 6 : border === "film" ? 4 : 0;
-    if (radius > 0) {
-      ctx.beginPath();
-      ctx.roundRect(paddingX, y, photoW, photoH, radius);
-      ctx.clip();
-    }
-
-    // Apply Instagram primary filter
-    applyInstagramFilter(ctx, filter, paddingX, y, photoW, photoH);
-
-    // Center-crop image into destination rectangle
-    const imgRatio = img.width / img.height;
-    const targetRatio = photoW / photoH;
-
-    let sx = 0,
-      sy = 0,
-      sWidth = img.width,
-      sHeight = img.height;
-
-    if (imgRatio > targetRatio) {
-      sWidth = img.height * targetRatio;
-      sx = (img.width - sWidth) / 2;
-    } else {
-      sHeight = img.width / targetRatio;
-      sy = (img.height - sHeight) / 2;
-    }
-
-    ctx.drawImage(img, sx, sy, sWidth, sHeight, paddingX, y, photoW, photoH);
-
-    // Reset filter for secondary overlays
-    ctx.filter = "none";
-    applyFilterOverlay(ctx, filter, paddingX, y, photoW, photoH);
-
-    // Polaroid subtle vignette
-    if (border === "polaroid") {
       ctx.save();
-      ctx.globalCompositeOperation = "multiply";
-      const radGrad = ctx.createRadialGradient(
-        paddingX + photoW / 2,
-        y + photoH / 2,
-        photoW * 0.35,
-        paddingX + photoW / 2,
-        y + photoH / 2,
-        photoW * 0.75
-      );
-      radGrad.addColorStop(0, "rgba(255, 255, 255, 0)");
-      radGrad.addColorStop(1, "rgba(20, 15, 10, 0.18)");
-      ctx.fillStyle = radGrad;
-      ctx.fillRect(paddingX, y, photoW, photoH);
+      applyInstagramFilter(ctx, filter);
+      drawAspectFill(ctx, img, paddingX, y, photoW, photoH);
+      ctx.filter = "none";
+      applyFilterOverlay(ctx, filter, paddingX, y, photoW, photoH);
       ctx.restore();
-    }
 
+      // Subtle printed photo edge
+      ctx.strokeStyle = "rgba(0, 0, 0, 0.4)";
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(paddingX, y, photoW, photoH);
+    });
+
+    // Top Black Stars (matching Image 1)
+    ctx.fillStyle = "#0A0A0A";
+    drawStar(ctx, paddingX + 35, 48, 5, 26, 12);
+    drawStar(ctx, width - paddingX - 35, 48, 5, 26, 12);
+
+    // Bottom Concert Event Stamp & Stars (matching Image 1)
+    const footerY = height - footerH;
+
+    // Corner stars flanking the concert text
+    drawStar(ctx, paddingX + 35, footerY + 60, 5, 28, 13);
+    drawStar(ctx, paddingX + 15, height - 60, 5, 28, 13);
+    drawStar(ctx, width - paddingX - 15, height - 60, 5, 28, 13);
+
+    // Bold Concert block typography
+    ctx.save();
+    ctx.fillStyle = "#0A0A0A";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = "900 52px -apple-system, BlinkMacSystemFont, 'Impact', 'Arial Black', sans-serif";
+
+    ctx.fillText("LIVE AT", width / 2, footerY + 70);
+    ctx.font = "900 58px -apple-system, BlinkMacSystemFont, 'Impact', 'Arial Black', sans-serif";
+    ctx.fillText("PHOTO BOOTH", width / 2, footerY + 140);
+
+    ctx.font = "800 40px -apple-system, BlinkMacSystemFont, 'Arial Black', sans-serif";
+    ctx.fillText(dateText, width / 2, footerY + 215);
+    ctx.font = "700 28px -apple-system, BlinkMacSystemFont, sans-serif";
+    ctx.fillText("SPECIAL EDITION", width / 2, footerY + 275);
     ctx.restore();
 
-    // Frame border stroke
-    if (frameBorderColor) {
-      ctx.strokeStyle = frameBorderColor;
+    // Apply tactile real paper texture overlay
+    applyRealisticPaperTexture(ctx, width, height, "cardstock");
+  }
+
+  // =========================================================================
+  // STYLE 2: EDITORIAL BEAUTY (Image 2: Sephora / YSE Beauty Reference)
+  // =========================================================================
+  else if (border === "editorial") {
+    const width = 1100;
+    const paddingX = 64;
+    const paddingTop = 70;
+    const headerBarH = 44;
+    const gap = 38;
+    const photoW = width - paddingX * 2;
+    const photoH = Math.round(photoW * 0.72);
+    const footerH = 310;
+    const height = paddingTop + 4 * (photoH + headerBarH) + 3 * gap + footerH;
+
+    canvas.width = width;
+    canvas.height = height;
+
+    // Premium bright editorial cardstock paper
+    ctx.fillStyle = "#FBFBF9";
+    ctx.fillRect(0, 0, width, height);
+
+    images.slice(0, 4).forEach((img, i) => {
+      const y = paddingTop + i * (photoH + headerBarH + gap);
+
+      // Black sub-header bar over each photo ("THE TO-GLOW MENU" style)
+      ctx.fillStyle = "#0A0A0A";
+      ctx.fillRect(paddingX, y, photoW, headerBarH);
+
+      ctx.save();
+      ctx.fillStyle = "#FFFFFF";
+      ctx.font = "800 24px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      ctx.fillText("■  THE PHOTO BOOTH MENU", paddingX + 24, y + headerBarH / 2);
+      ctx.restore();
+
+      // Photo
+      const photoY = y + headerBarH;
+      ctx.save();
+      applyInstagramFilter(ctx, filter);
+      drawAspectFill(ctx, img, paddingX, photoY, photoW, photoH);
+      ctx.filter = "none";
+      applyFilterOverlay(ctx, filter, paddingX, photoY, photoW, photoH);
+      ctx.restore();
+
+      ctx.strokeStyle = "rgba(0, 0, 0, 0.3)";
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(paddingX, photoY, photoW, photoH);
+    });
+
+    // Elegant Sephora/YSE Brand Footer
+    const footerY = height - footerH + 40;
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    ctx.fillStyle = "#0A0A0A";
+    ctx.font = "900 64px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif";
+    ctx.fillText("STUDIO", width / 2, footerY + 35);
+
+    ctx.font = "700 28px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif";
+    ctx.letterSpacing = "6px";
+    ctx.fillText("B E A U T Y", width / 2, footerY + 105);
+
+    // Fine rule line
+    ctx.strokeStyle = "#0A0A0A";
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(width / 2 - 160, footerY + 145);
+    ctx.lineTo(width / 2 + 160, footerY + 145);
+    ctx.stroke();
+
+    ctx.font = "600 28px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif";
+    ctx.letterSpacing = "8px";
+    ctx.fillText("E D I T I O N", width / 2, footerY + 195);
+    ctx.restore();
+
+    applyRealisticPaperTexture(ctx, width, height, "matte");
+  }
+
+  // =========================================================================
+  // STYLE 3: ART EXHIBITION / KOREAN (Image 3: Lee Hyori Exhibition Reference)
+  // =========================================================================
+  else if (border === "korean") {
+    const width = 1140;
+    const paddingLeft = 145; // Space for vertical Korean text
+    const paddingRight = 95;  // Space for frame index counters (01, 02...)
+    const paddingTop = 210;  // Space for cursive calligraphy header
+    const gap = 36;
+    const photoW = width - paddingLeft - paddingRight;
+    const photoH = Math.round(photoW * 0.72);
+    const footerH = 170;
+    const height = paddingTop + 4 * photoH + 3 * gap + footerH;
+
+    canvas.width = width;
+    canvas.height = height;
+
+    // Warm natural linen fine art paper
+    ctx.fillStyle = "#F7F4EC";
+    ctx.fillRect(0, 0, width, height);
+
+    // Top cursive script header: "The Memories. / The Never Known"
+    ctx.save();
+    ctx.fillStyle = "#1E1C1A";
+    ctx.font = "italic 400 68px 'Baskerville', 'Georgia', 'Playfair Display', serif";
+    ctx.textAlign = "left";
+    ctx.fillText("Special Moments.", paddingLeft - 30, 95);
+    ctx.font = "italic 300 48px 'Baskerville', 'Georgia', serif";
+    ctx.fillText("The Times We Remember", paddingLeft + 15, 160);
+    ctx.restore();
+
+    // Photos + Side markings
+    images.slice(0, 4).forEach((img, i) => {
+      const y = paddingTop + i * (photoH + gap);
+
+      // Photo
+      ctx.save();
+      applyInstagramFilter(ctx, filter);
+      drawAspectFill(ctx, img, paddingLeft, y, photoW, photoH);
+      ctx.filter = "none";
+      applyFilterOverlay(ctx, filter, paddingLeft, y, photoW, photoH);
+      ctx.restore();
+
+      ctx.strokeStyle = "rgba(0, 0, 0, 0.2)";
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(paddingLeft, y, photoW, photoH);
+
+      // Right margin frame counter indicator (▸ 01, ▸ 02...)
+      ctx.save();
+      ctx.fillStyle = "#4A463F";
+      ctx.font = "600 20px -apple-system, BlinkMacSystemFont, monospace";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      ctx.fillText(`▸ 0${i + 1}`, width - paddingRight + 18, y + photoH / 2);
+      ctx.restore();
+    });
+
+    // Left margin vertical Korean typography
+    ctx.save();
+    ctx.translate(65, paddingTop + photoH * 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillStyle = "#4A463F";
+    ctx.font = "500 24px -apple-system, BlinkMacSystemFont, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("순간의 조각들 • 우리가 기억할 시간들", 0, 0);
+    ctx.restore();
+
+    // Bottom Photographer credit footer
+    ctx.save();
+    ctx.fillStyle = "#35322D";
+    ctx.font = "600 26px -apple-system, BlinkMacSystemFont, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(`Photographer • MEMORIES ARCHIVE • ${dateText}`, width / 2, height - footerH / 2);
+    ctx.restore();
+
+    applyRealisticPaperTexture(ctx, width, height, "linen");
+  }
+
+  // =========================================================================
+  // STYLE 4: 2x2 BLOCK PARTY (Image 4: YSL Block Party London Reference)
+  // =========================================================================
+  else if (border === "party") {
+    // 2x2 Grid Layout
+    const width = 1300;
+    const paddingX = 60;
+    const headerH = 140;
+    const footerH = 150;
+    const gridGap = 28;
+
+    const cellW = (width - paddingX * 2 - gridGap) / 2; // ~576
+    const cellH = Math.round(cellW * 1.05); // ~604
+
+    const height = headerH + cellH * 2 + gridGap + footerH;
+
+    canvas.width = width;
+    canvas.height = height;
+
+    // Bright street-post cardstock paper
+    ctx.fillStyle = "#FAFAF8";
+    ctx.fillRect(0, 0, width, height);
+
+    // Top Full-width Bold Condensed Block Header
+    ctx.save();
+    ctx.fillStyle = "#0A0A0A";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = "900 68px 'Impact', 'Arial Black', sans-serif";
+    ctx.fillText("BLOCK PARTY PHOTO BOOTH", width / 2, headerH / 2 + 10);
+    ctx.restore();
+
+    // 2x2 Grid of Photos
+    const gridPositions = [
+      { x: paddingX, y: headerH },
+      { x: paddingX + cellW + gridGap, y: headerH },
+      { x: paddingX, y: headerH + cellH + gridGap },
+      { x: paddingX + cellW + gridGap, y: headerH + cellH + gridGap },
+    ];
+
+    images.slice(0, 4).forEach((img, i) => {
+      const pos = gridPositions[i];
+      if (!pos) return;
+
+      ctx.save();
+      applyInstagramFilter(ctx, filter);
+      drawAspectFill(ctx, img, pos.x, pos.y, cellW, cellH);
+      ctx.filter = "none";
+      applyFilterOverlay(ctx, filter, pos.x, pos.y, cellW, cellH);
+      ctx.restore();
+
+      ctx.strokeStyle = "rgba(0, 0, 0, 0.4)";
       ctx.lineWidth = 2;
-      ctx.strokeRect(paddingX, y, photoW, photoH);
-    }
-  });
+      ctx.strokeRect(pos.x, pos.y, cellW, cellH);
+    });
 
-  // 3. Render border-specific accents
-  if (border === "film") {
-    drawFilmAccents(ctx, width, height, count, photoH, gap, paddingTop);
-  } else if (border === "stamp") {
-    drawStampAccents(ctx, width, height, count, paddingX, photoW, photoH, gap, paddingTop, dateText);
+    // Bottom Condensed Street Title: "LONDON EDITION — 03/09"
+    ctx.save();
+    ctx.fillStyle = "#0A0A0A";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = "900 64px 'Impact', 'Arial Black', sans-serif";
+    ctx.fillText(`SPECIAL EDITION — ${dateText}`, width / 2, height - footerH / 2);
+    ctx.restore();
+
+    applyRealisticPaperTexture(ctx, width, height, "matte");
   }
-
-  // 4. Footer Branding & Typography
-  const footerCenterY = height - footerH / 2;
-
-  ctx.save();
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-
-  if (border === "film") {
-    ctx.fillStyle = textColor;
-    ctx.font = "bold 26px 'Courier New', Courier, monospace";
-    ctx.fillText(`🎞️  3 5 M M   F I L M   S T R I P  🎞️`, width / 2, footerCenterY - 14);
-    ctx.fillStyle = subtextColor;
-    ctx.font = "18px 'Courier New', Courier, monospace";
-    ctx.fillText(`ISO 400 • ${dateText} • FRAME 21-24`, width / 2, footerCenterY + 22);
-  } else if (border === "polaroid") {
-    // Authentic handwritten / typewriter Polaroid caption
-    ctx.fillStyle = textColor;
-    ctx.font = "italic 600 36px 'Georgia', serif";
-    ctx.fillText(`Photo Booth Memories`, width / 2, footerCenterY - 26);
-    ctx.fillStyle = subtextColor;
-    ctx.font = "400 22px -apple-system, BlinkMacSystemFont, sans-serif";
-    ctx.fillText(`${dateText}`, width / 2, footerCenterY + 26);
-  } else if (border === "stamp") {
-    ctx.fillStyle = textColor;
-    ctx.font = "bold 32px 'Courier New', Courier, monospace";
-    ctx.fillText(`★  P O S T A G E   S T A M P S  ★`, width / 2, footerCenterY - 18);
-    ctx.fillStyle = subtextColor;
-    ctx.font = "18px 'Courier New', Courier, monospace";
-    ctx.fillText(`FIRST CLASS MAIL • ${dateText}`, width / 2, footerCenterY + 24);
-  } else if (border === "pastel") {
-    ctx.fillStyle = textColor;
-    ctx.font = "800 36px -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif";
-    ctx.fillText(`♥  P H O T O   B O O T H  ♥`, width / 2, footerCenterY - 20);
-    ctx.fillStyle = subtextColor;
-    ctx.font = "600 22px -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif";
-    ctx.fillText(`${dateText} • SPECIAL MEMORIES`, width / 2, footerCenterY + 24);
-  } else {
-    // Classic / Noir
-    ctx.fillStyle = textColor;
-    ctx.font = "700 36px -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif";
-    ctx.fillText(`✦   P H O T O   B O O T H   ✦`, width / 2, footerCenterY - 22);
-    ctx.fillStyle = subtextColor;
-    ctx.font = "500 22px -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif";
-    ctx.fillText(dateText, width / 2, footerCenterY + 24);
-  }
-  ctx.restore();
 
   const dataUrl = canvas.toDataURL("image/png");
   const blob = await new Promise<Blob>((resolve, reject) => {
