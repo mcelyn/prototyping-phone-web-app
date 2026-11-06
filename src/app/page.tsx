@@ -1,8 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { playCountdownBeep, playShutterSound } from "@/lib/audio";
-import { generatePhotoStrip, PhotoStripOptions } from "@/lib/photoStrip";
+import { playCountdownBeep, playShutterSound, getAudioContext } from "@/lib/audio";
+import {
+  generatePhotoStrip,
+  BorderStyle,
+  InstagramFilter,
+  BORDER_OPTIONS,
+  FILTER_OPTIONS,
+} from "@/lib/photoStrip";
 
 type AppState = "camera" | "countdown" | "processing" | "results" | "permission_denied";
 
@@ -12,9 +18,9 @@ export default function PhotoBooth() {
   const [countdownNumber, setCountdownNumber] = useState<number | null>(null);
   const [currentShotIndex, setCurrentShotIndex] = useState<number>(0);
   const [capturedPhotos, setCapturedPhotos] = useState<string[]>([]);
-  const [isFlashing, setIsFlashing] = useState<boolean>(false);
-  const [stripTheme, setStripTheme] = useState<"white" | "black" | "cream">("white");
-  const [stripFilter, setStripFilter] = useState<"normal" | "bw" | "warm">("normal");
+  const [isLightFlooding, setIsLightFlooding] = useState<boolean>(false);
+  const [selectedBorder, setSelectedBorder] = useState<BorderStyle>("film");
+  const [selectedFilter, setSelectedFilter] = useState<InstagramFilter>("normal");
   const [stripResult, setStripResult] = useState<{ blob: Blob; dataUrl: string } | null>(null);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
   const [isStandalone, setIsStandalone] = useState<boolean>(false);
@@ -34,7 +40,6 @@ export default function PhotoBooth() {
 
   // Initialize camera stream
   const startCamera = useCallback(async (facing: "user" | "environment" = facingMode) => {
-    // Stop any existing stream tracks
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
@@ -59,13 +64,21 @@ export default function PhotoBooth() {
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        await videoRef.current.play();
+        try {
+          await videoRef.current.play();
+        } catch (playErr: unknown) {
+          if ((playErr as Error)?.name !== "AbortError") {
+            throw playErr;
+          }
+        }
       }
 
       setAppState("camera");
-    } catch (err) {
-      console.error("Camera access error:", err);
-      setAppState("permission_denied");
+    } catch (err: unknown) {
+      if ((err as Error)?.name !== "AbortError") {
+        console.error("Camera access error:", err);
+        setAppState("permission_denied");
+      }
     }
   }, [facingMode]);
 
@@ -98,7 +111,7 @@ export default function PhotoBooth() {
     if (!ctx) return null;
 
     ctx.save();
-    // If front camera, mirror horizontally so saved photo matches preview
+    // Mirror horizontally for front-facing camera
     if (facingMode === "user") {
       ctx.translate(canvas.width, 0);
       ctx.scale(-1, 1);
@@ -106,16 +119,17 @@ export default function PhotoBooth() {
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     ctx.restore();
 
-    return canvas.toDataURL("image/jpeg", 0.95);
+    return canvas.toDataURL("image/jpeg", 0.96);
   };
 
   // Helper wait function
   const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  // Sequence to take 4 photos with 3-2-1 countdown for each
+  // Sequence to take 4 photos with 3-2-1 countdown, sound, and light flood
   const startPhotoSequence = async () => {
     if (isCapturingRef.current) return;
     isCapturingRef.current = true;
+    getAudioContext(); // Unlock audio on user tap
     setAppState("countdown");
     const photos: string[] = [];
 
@@ -130,28 +144,31 @@ export default function PhotoBooth() {
           await wait(900);
         }
 
-        // Shutter instant
+        // Shutter snap instant
         setCountdownNumber(null);
         playCountdownBeep(true);
         playShutterSound();
+
+        // Haptic feedback
         if (typeof navigator !== "undefined" && navigator.vibrate) {
-          navigator.vibrate(60);
+          navigator.vibrate([60, 40, 60]);
         }
 
-        // Screen Flash
-        setIsFlashing(true);
+        // Trigger Blinding Light Flood
+        setIsLightFlooding(true);
+
         const photoUrl = captureCurrentFrame();
         if (photoUrl) {
           photos.push(photoUrl);
           setCapturedPhotos([...photos]);
         }
 
-        await wait(200);
-        setIsFlashing(false);
+        await wait(320);
+        setIsLightFlooding(false);
 
-        // Intermission between shots (except after last shot)
+        // Intermission between shots
         if (shot < 3) {
-          await wait(700);
+          await wait(750);
         }
       }
 
@@ -160,8 +177,8 @@ export default function PhotoBooth() {
       await wait(300);
 
       const strip = await generatePhotoStrip(photos, {
-        theme: stripTheme,
-        filter: stripFilter,
+        border: selectedBorder,
+        filter: selectedFilter,
       });
 
       setStripResult(strip);
@@ -172,16 +189,17 @@ export default function PhotoBooth() {
     } finally {
       isCapturingRef.current = false;
       setCountdownNumber(null);
+      setIsLightFlooding(false);
     }
   };
 
-  // Update strip whenever theme or filter changes on results screen
+  // Update strip whenever border or filter changes on results screen
   useEffect(() => {
     if (appState === "results" && capturedPhotos.length === 4) {
       let isCurrent = true;
       generatePhotoStrip(capturedPhotos, {
-        theme: stripTheme,
-        filter: stripFilter,
+        border: selectedBorder,
+        filter: selectedFilter,
       }).then((result) => {
         if (isCurrent) {
           setStripResult(result);
@@ -191,7 +209,7 @@ export default function PhotoBooth() {
         isCurrent = false;
       };
     }
-  }, [stripTheme, stripFilter, appState, capturedPhotos]);
+  }, [selectedBorder, selectedFilter, appState, capturedPhotos]);
 
   // Retake: clear photos and go back to camera preview
   const handleRetake = async () => {
@@ -209,10 +227,9 @@ export default function PhotoBooth() {
     if (!stripResult) return;
 
     try {
-      const fileName = `photo-strip-${Date.now()}.png`;
+      const fileName = `photo-strip-${selectedBorder}-${Date.now()}.png`;
       const file = new File([stripResult.blob], fileName, { type: "image/png" });
 
-      // Check if navigator.share supports file sharing (Mobile Safari / Chrome)
       if (
         typeof navigator !== "undefined" &&
         navigator.canShare &&
@@ -221,7 +238,7 @@ export default function PhotoBooth() {
         setSaveStatus("Opening share sheet... Tap 'Save Image'");
         await navigator.share({
           files: [file],
-          title: "My Photo Strip",
+          title: "My Photo Booth Strip",
           text: "Created with Photo Booth",
         });
         setSaveStatus("Shared successfully!");
@@ -233,14 +250,14 @@ export default function PhotoBooth() {
         setSaveStatus(null);
         return;
       }
-      console.log("Share skipped or not supported, falling back to download", err);
+      console.log("Share skipped, falling back to download", err);
     }
 
-    // Fallback: download directly (Laptop / Desktop browser)
+    // Laptop fallback: download image file
     try {
       const a = document.createElement("a");
       a.href = stripResult.dataUrl;
-      a.download = `photo-strip-${Date.now()}.png`;
+      a.download = `photo-strip-${selectedBorder}-${Date.now()}.png`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -262,9 +279,18 @@ export default function PhotoBooth() {
         paddingRight: "env(safe-area-inset-right, 0px)",
       }}
     >
-      {/* WHITE FLASH OVERLAY */}
-      {isFlashing && (
-        <div className="fixed inset-0 z-50 bg-white pointer-events-none animate-flash" />
+      {/* BLINDING LIGHT FLOOD OVERLAY */}
+      {isLightFlooding && (
+        <div className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center overflow-hidden">
+          <div
+            className="absolute inset-0 animate-light-flood"
+            style={{
+              background:
+                "radial-gradient(circle at center, #ffffff 0%, rgba(255, 255, 255, 0.98) 55%, rgba(255, 248, 235, 0.95) 100%)",
+            }}
+          />
+          <div className="w-96 h-96 rounded-full border-8 border-white/60 animate-bloom-ring pointer-events-none" />
+        </div>
       )}
 
       {/* 1. CAMERA VIEW */}
@@ -285,13 +311,11 @@ export default function PhotoBooth() {
 
           {/* Top Bar Header */}
           <div className="relative z-20 w-full pt-3 px-5 flex items-center justify-between">
-            {/* App Title badge */}
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-xs font-semibold tracking-wider uppercase text-white/90">
               <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
               Photo Booth
             </div>
 
-            {/* Quick Actions (Switch Camera & PWA Install Guide) */}
             <div className="flex items-center gap-2">
               {!isStandalone && (
                 <button
@@ -308,7 +332,6 @@ export default function PhotoBooth() {
                 aria-label="Switch camera"
                 className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/15 flex items-center justify-center text-white active:scale-90 transition-transform disabled:opacity-40"
               >
-                {/* Switch Camera SVG */}
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="w-5 h-5"
@@ -330,12 +353,10 @@ export default function PhotoBooth() {
           {/* 3-2-1 Countdown & Shot Indicator Center Overlay */}
           {appState === "countdown" && (
             <div className="relative z-30 flex-1 flex flex-col items-center justify-center pointer-events-none">
-              {/* Photo X of 4 badge */}
               <div className="mb-4 px-4 py-1.5 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-sm font-semibold tracking-wider uppercase text-white">
                 Photo {currentShotIndex} of 4
               </div>
 
-              {/* Big animated countdown number */}
               {countdownNumber !== null ? (
                 <div
                   key={`${currentShotIndex}-${countdownNumber}`}
@@ -349,7 +370,7 @@ export default function PhotoBooth() {
                 </div>
               )}
 
-              {/* 4 dots progress */}
+              {/* 4 dots progress indicator */}
               <div className="mt-8 flex items-center gap-2">
                 {[1, 2, 3, 4].map((i) => (
                   <div
@@ -369,13 +390,12 @@ export default function PhotoBooth() {
 
           {/* Processing overlay */}
           {appState === "processing" && (
-            <div className="relative z-30 flex-1 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div className="relative z-30 flex-1 flex flex-col items-center justify-center bg-black/60 backdrop-blur-md">
               <div className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin mb-4" />
-              <p className="text-base font-medium tracking-wide">Developing your photo strip...</p>
+              <p className="text-base font-semibold tracking-wide">Developing photo strip...</p>
             </div>
           )}
 
-          {/* Empty spacer when not counting down */}
           {appState === "camera" && <div className="flex-1" />}
 
           {/* Bottom Shutter Controls */}
@@ -383,16 +403,14 @@ export default function PhotoBooth() {
             {appState === "camera" && (
               <div className="flex flex-col items-center gap-3">
                 <span className="text-xs font-medium tracking-wider uppercase text-white/70 drop-shadow">
-                  Takes 4 photos in a row
+                  Takes 4 photos with flash &amp; sound
                 </span>
 
-                {/* Big iOS Style Camera Shutter Button */}
                 <button
                   onClick={startPhotoSequence}
                   aria-label="Take 4 photos"
                   className="group relative flex items-center justify-center w-20 h-20 rounded-full border-4 border-white p-1 transition-transform active:scale-95 touch-manipulation focus:outline-none"
                 >
-                  {/* Inner Solid White Shutter Button */}
                   <span className="w-full h-full rounded-full bg-white transition-all duration-150 group-active:scale-90 group-active:bg-neutral-200 shadow-lg" />
                 </button>
               </div>
@@ -404,108 +422,89 @@ export default function PhotoBooth() {
       {/* 2. RESULTS VIEW */}
       {appState === "results" && stripResult && (
         <div className="relative w-full h-full flex flex-col bg-neutral-950">
-          {/* Top Header / Customization Controls */}
-          <div className="shrink-0 pt-2 pb-3 px-4 flex flex-col gap-2.5 bg-neutral-900/80 backdrop-blur-xl border-b border-white/10 z-20">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold tracking-wide uppercase text-white/90">
-                Photo Strip
+          {/* Top Customization Panel */}
+          <div className="shrink-0 pt-2 pb-2.5 px-3 flex flex-col gap-2 bg-neutral-900/95 backdrop-blur-xl border-b border-white/10 z-20">
+            <div className="flex items-center justify-between px-1">
+              <h2 className="text-xs font-bold tracking-wider uppercase text-white/90">
+                Customize Photo Strip
               </h2>
               {saveStatus && (
-                <span className="text-xs font-semibold text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">
+                <span className="text-[11px] font-semibold text-emerald-400 bg-emerald-950/70 border border-emerald-500/30 px-2 py-0.5 rounded-full">
                   {saveStatus}
                 </span>
               )}
             </div>
 
-            {/* Customization Selectors: Border Theme & Photo Filter */}
-            <div className="flex items-center justify-between gap-2 text-xs">
-              {/* Border Color */}
-              <div className="flex items-center gap-1.5 bg-black/40 p-1 rounded-lg border border-white/10">
-                <span className="text-white/50 text-[11px] px-1 font-medium">Border:</span>
-                <button
-                  onClick={() => setStripTheme("white")}
-                  className={`px-2 py-1 rounded font-medium transition-all ${
-                    stripTheme === "white"
-                      ? "bg-white text-black font-semibold shadow-sm"
-                      : "text-white/70 hover:text-white"
-                  }`}
-                >
-                  Classic
-                </button>
-                <button
-                  onClick={() => setStripTheme("cream")}
-                  className={`px-2 py-1 rounded font-medium transition-all ${
-                    stripTheme === "cream"
-                      ? "bg-[#FBF8F1] text-stone-900 font-semibold shadow-sm"
-                      : "text-white/70 hover:text-white"
-                  }`}
-                >
-                  Cream
-                </button>
-                <button
-                  onClick={() => setStripTheme("black")}
-                  className={`px-2 py-1 rounded font-medium transition-all ${
-                    stripTheme === "black"
-                      ? "bg-neutral-800 text-white font-semibold shadow-sm"
-                      : "text-white/70 hover:text-white"
-                  }`}
-                >
-                  Noir
-                </button>
+            {/* 1. Border Style Selector (Stamp, Vintage Film, Polaroid, etc.) */}
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] uppercase font-bold text-white/50 tracking-wider px-1">
+                Border Style
+              </span>
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 px-0.5">
+                {BORDER_OPTIONS.map((opt) => {
+                  const isActive = selectedBorder === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      onClick={() => setSelectedBorder(opt.id)}
+                      className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                        isActive
+                          ? "bg-white text-black shadow-md scale-102"
+                          : "bg-white/10 text-white/80 hover:bg-white/15"
+                      }`}
+                    >
+                      <span className="text-sm">{opt.icon}</span>
+                      <span>{opt.name}</span>
+                    </button>
+                  );
+                })}
               </div>
+            </div>
 
-              {/* Photo Filter */}
-              <div className="flex items-center gap-1.5 bg-black/40 p-1 rounded-lg border border-white/10">
-                <span className="text-white/50 text-[11px] px-1 font-medium">Filter:</span>
-                <button
-                  onClick={() => setStripFilter("normal")}
-                  className={`px-2 py-1 rounded font-medium transition-all ${
-                    stripFilter === "normal"
-                      ? "bg-white/20 text-white font-semibold"
-                      : "text-white/60 hover:text-white"
-                  }`}
-                >
-                  Color
-                </button>
-                <button
-                  onClick={() => setStripFilter("bw")}
-                  className={`px-2 py-1 rounded font-medium transition-all ${
-                    stripFilter === "bw"
-                      ? "bg-white/20 text-white font-semibold"
-                      : "text-white/60 hover:text-white"
-                  }`}
-                >
-                  B&amp;W
-                </button>
-                <button
-                  onClick={() => setStripFilter("warm")}
-                  className={`px-2 py-1 rounded font-medium transition-all ${
-                    stripFilter === "warm"
-                      ? "bg-white/20 text-white font-semibold"
-                      : "text-white/60 hover:text-white"
-                  }`}
-                >
-                  Warm
-                </button>
+            {/* 2. Instagram Filters Selector */}
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] uppercase font-bold text-white/50 tracking-wider px-1">
+                Instagram Filter
+              </span>
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 px-0.5">
+                {FILTER_OPTIONS.map((f) => {
+                  const isActive = selectedFilter === f.id;
+                  return (
+                    <button
+                      key={f.id}
+                      onClick={() => setSelectedFilter(f.id)}
+                      className={`shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                        isActive
+                          ? "bg-gradient-to-r from-amber-500 to-pink-500 text-white shadow-md scale-102"
+                          : "bg-white/10 text-white/80 hover:bg-white/15"
+                      }`}
+                    >
+                      <span
+                        className="w-2.5 h-2.5 rounded-full border border-white/30"
+                        style={{ backgroundColor: f.previewColor }}
+                      />
+                      <span>{f.name}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
 
           {/* Photo Strip Scrollable Canvas Preview */}
           <div className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar px-6 py-6 flex items-start justify-center">
-            <div className="relative max-w-[320px] w-full rounded-md shadow-[0_20px_50px_rgba(0,0,0,0.85)] border border-white/10 overflow-hidden transform transition-transform">
+            <div className="relative max-w-[320px] w-full rounded-md shadow-[0_24px_60px_rgba(0,0,0,0.9)] border border-white/10 overflow-hidden transform transition-transform">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={stripResult.dataUrl}
-                alt="Your 4-photo booth strip"
+                alt="Your customized photo booth strip"
                 className="w-full h-auto object-contain block"
               />
             </div>
           </div>
 
           {/* Bottom Action Bar */}
-          <div className="shrink-0 p-4 bg-neutral-900/90 backdrop-blur-xl border-t border-white/10 flex items-center gap-3 z-20">
-            {/* Retake Button */}
+          <div className="shrink-0 p-4 bg-neutral-900/95 backdrop-blur-xl border-t border-white/10 flex items-center gap-3 z-20">
             <button
               onClick={handleRetake}
               className="flex-1 h-13 rounded-2xl bg-white/10 hover:bg-white/15 active:scale-98 transition-all flex items-center justify-center gap-2 text-sm font-semibold text-white border border-white/10"
@@ -527,7 +526,6 @@ export default function PhotoBooth() {
               Retake
             </button>
 
-            {/* Save / Share Button */}
             <button
               onClick={handleSaveOrShare}
               className="flex-[2] h-13 rounded-2xl bg-white text-black hover:bg-neutral-100 active:scale-98 transition-all flex items-center justify-center gap-2 text-sm font-bold shadow-lg"

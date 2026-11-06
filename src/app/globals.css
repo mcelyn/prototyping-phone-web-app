@@ -23,7 +23,6 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif;
 }
 
-/* Prevent elastic bounce on iOS Safari */
 body {
   position: fixed;
   width: 100%;
@@ -33,23 +32,23 @@ body {
   bottom: 0;
 }
 
-/* Smooth pop animation for countdown */
+/* Smooth pop animation for countdown numbers */
 @keyframes countdownPop {
   0% {
-    transform: scale(0.6);
+    transform: scale(0.5);
     opacity: 0;
   }
-  40% {
-    transform: scale(1.15);
+  35% {
+    transform: scale(1.18);
     opacity: 1;
   }
-  70% {
+  65% {
     transform: scale(1);
     opacity: 1;
   }
   100% {
-    transform: scale(0.9);
-    opacity: 0.8;
+    transform: scale(0.92);
+    opacity: 0.85;
   }
 }
 
@@ -57,21 +56,45 @@ body {
   animation: countdownPop 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Flash animation */
-@keyframes flashWhite {
+/* Blinding Light Flood Camera Flash Animation */
+@keyframes lightFlood {
   0% {
     opacity: 1;
+    transform: scale(1);
+    filter: brightness(2) contrast(1.2);
+  }
+  20% {
+    opacity: 1;
+    transform: scale(1.02);
   }
   100% {
     opacity: 0;
+    transform: scale(1.04);
+    filter: brightness(1);
   }
 }
 
-.animate-flash {
-  animation: flashWhite 0.4s cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
+.animate-light-flood {
+  animation: lightFlood 0.55s cubic-bezier(0.15, 0.85, 0.25, 1) forwards;
 }
 
-/* Hide scrollbar for photo strip view */
+/* Flash optic bloom ring */
+@keyframes bloomRing {
+  0% {
+    opacity: 0.9;
+    transform: scale(0.4);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.6);
+  }
+}
+
+.animate-bloom-ring {
+  animation: bloomRing 0.5s ease-out forwards;
+}
+
+/* Hide scrollbars for photo strip and filter carousel */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
